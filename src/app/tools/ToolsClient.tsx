@@ -7,6 +7,8 @@ import Link from "next/link";
 import { useI18n } from "@/lib/i18n";
 import { alpha, useTheme } from "@mui/material";
 import LockIcon from "@mui/icons-material/Lock";
+import DnsIcon from "@mui/icons-material/Dns";
+import LanguageIcon from "@mui/icons-material/Language";
 
 interface ToolItem {
   key: string;
@@ -27,6 +29,20 @@ export default function ToolsClient() {
       description: t.tools.base64.description,
       href: "/tools/base64",
       icon: <LockIcon sx={{ fontSize: 32 }} />,
+    },
+    {
+      key: "dns",
+      title: t.tools.dns.title,
+      description: t.tools.dns.description,
+      href: "/tools/dns",
+      icon: <DnsIcon sx={{ fontSize: 32 }} />,
+    },
+    {
+      key: "ip",
+      title: t.tools.ip.title,
+      description: t.tools.ip.description,
+      href: "/tools/ip",
+      icon: <LanguageIcon sx={{ fontSize: 32 }} />,
     },
   ];
 
