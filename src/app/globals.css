@@ -1,0 +1,60 @@
+
+
+@import "tailwindcss";
+@plugin "@tailwindcss/typography";
+
+:root {
+  --background: #f8f6f3;
+  --foreground: #4a4a4a;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #1e1e1e;
+    --foreground: #e8e4df;
+  }
+}
+
+[data-theme="dark"] {
+  --background: #1e1e1e;
+  --foreground: #e8e4df;
+}
+
+html {
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-inter), 'MiSans', var(--font-nunito), system-ui, -apple-system, sans-serif;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+a {
+  color: #8b9dc3;
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+a:hover {
+  color: #c9a87c;
+}
+
+code, pre {
+  font-family: var(--font-jetbrains-mono), 'JetBrains Mono', Consolas, monospace;
+}
+
+text{
+  z-index: 3;
+}
+
+::selection {
+  background: #c9a87c;
+  color: #fdfcfb;
+}
