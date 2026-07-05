@@ -191,28 +191,19 @@ export default function DnsLeakClient() {
         ),
       );
 
-      const doFetch = async (url: string) => {
-        const res = await fetch(url, {
-          signal: AbortSignal.timeout(10000),
-        });
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const data: IpGeolocation = await res.json();
-        if (data.status === "fail")
-          throw new Error(data.country || "Lookup failed");
-        return data;
-      };
-
       let data: IpGeolocation | null = null;
       try {
-        data = await doFetch(
-          `http://pro.ip-api.com/json/${ip}?fields=66846719&key=O40YckkbgRCMWLu`,
+        // Use our own API proxy to avoid mixed-content errors
+        // (ip-api.com only supports HTTP, so the browser can't call it directly on an HTTPS page)
+        const res = await fetch(
+          `/api/ip-geo?ip=${encodeURIComponent(ip)}`,
+          { signal: AbortSignal.timeout(10000) },
         );
-      } catch {
-        try {
-          data = await doFetch(`http://ip-api.com/json/${ip}?fields=66846719`);
-        } catch {
-          // ignore, geo is best-effort
+        if (res.ok) {
+          data = await res.json();
         }
+      } catch {
+        // ignore, geo is best-effort
       }
 
       setRows((prev) =>
