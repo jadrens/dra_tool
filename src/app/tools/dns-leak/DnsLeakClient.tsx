@@ -205,7 +205,7 @@ export default function DnsLeakClient() {
       let data: IpGeolocation | null = null;
       try {
         data = await doFetch(
-          `https://pro.ip-api.com/json/${ip}?fields=66846719&key=O40YckkbgRCMWLu`,
+          `http://pro.ip-api.com/json/${ip}?fields=66846719&key=O40YckkbgRCMWLu`,
         );
       } catch {
         try {
