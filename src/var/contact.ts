@@ -44,15 +44,15 @@ export const CONTACT_CONFIG: Record<string, ContactConfigItem> = {
     name: "Bilibili",
     icon: "bilibili",
     url: "https://space.bilibili.com/435996008",
-    username: "dragonren",
+    username: "jadren",
     color: "#00A1D6",
   },
   telegram: {
     enabled: true,
     name: "Telegram",
     icon: "telegram",
-    url: "https://t.me/dragonrens",
-    username: "@dragonrens",
+    url: "https://t.me/jadrens",
+    username: "@jadrens",
     color: "#26A5E4",
   },
   email: {
@@ -141,7 +141,7 @@ export const CONTACT_CONFIG: Record<string, ContactConfigItem> = {
     icon: "wechat",
     url: "#",
     actions: (toast) => {
-      toast("id: DragonRens");
+      toast("id: JadRens");
     },
     username: "Caliconix",
     color: "#07C160",

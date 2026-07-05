@@ -9,6 +9,7 @@ import { alpha, useTheme } from "@mui/material";
 import LockIcon from "@mui/icons-material/Lock";
 import DnsIcon from "@mui/icons-material/Dns";
 import LanguageIcon from "@mui/icons-material/Language";
+import ShieldIcon from "@mui/icons-material/Shield";
 
 interface ToolItem {
   key: string;
@@ -43,6 +44,13 @@ export default function ToolsClient() {
       description: t.tools.ip.description,
       href: "/tools/ip",
       icon: <LanguageIcon sx={{ fontSize: 32 }} />,
+    },
+    {
+      key: "dnsLeak",
+      title: t.tools.dnsLeak.title,
+      description: t.tools.dnsLeak.description,
+      href: "/tools/dns-leak",
+      icon: <ShieldIcon sx={{ fontSize: 32 }} />,
     },
   ];
 

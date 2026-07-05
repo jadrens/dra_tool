@@ -41,6 +41,12 @@ export async function GET() {
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
+  <url>
+    <loc>${BASE_URL}/tools/dns-leak</loc>
+    <lastmod>${today}</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
 </urlset>`;
 
   return new NextResponse(xml, {

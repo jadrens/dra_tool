@@ -6,18 +6,12 @@ import {
   Typography,
   TextField,
   Button,
-  Select,
-  MenuItem,
-  FormControl,
-  InputLabel,
   Table,
   TableBody,
   TableCell,
-  TableContainer,
   TableHead,
   TableRow,
   Paper,
-  Chip,
   Snackbar,
   Alert,
   CircularProgress,
@@ -30,27 +24,6 @@ import Footer from "@/components/layout/Footer";
 import { useI18n } from "@/lib/i18n";
 import { alpha } from "@mui/material";
 
-const RECORD_TYPES = [
-  "A",
-  "AAAA",
-  "CNAME",
-  "MX",
-  "TXT",
-  "NS",
-  "SOA",
-  "SRV",
-  "CAA",
-  "PTR",
-  "NAPTR",
-  "DS",
-  "DNSKEY",
-  "TLSA",
-  "SSHFP",
-  "HTTPS",
-  "SVCB",
-] as const;
-
-const COMMON_TYPES = ["A", "AAAA", "CNAME", "MX", "TXT", "NS"];
 
 interface DnsRecord {
   name: string;
@@ -69,8 +42,73 @@ interface ApiResponse {
   error?: string;
 }
 
-function getRecordTypeLabel(type: string, t: Record<string, string>) {
-  return t[type] || type;
+const DISPLAY_ORDER = [
+  "A",
+  "CNAME",
+  "AAAA",
+  "MX",
+  "TXT",
+  "NS",
+  "CAA",
+  "PTR",
+] as const;
+
+const QUERY_TYPES = ["A", "CNAME", "AAAA", "MX", "TXT", "NS", "CAA"] as const;
+
+type SupportedRecordType = (typeof DISPLAY_ORDER)[number];
+
+interface QuerySection {
+  type: SupportedRecordType;
+  label: string;
+  records: DnsRecord[];
+  note?: string;
+  id: string;
+}
+
+function isIpv4(address: string): boolean {
+  return /^((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(?!$)|$)){4}$/.test(
+    address
+  );
+}
+
+function isIpv6(address: string): boolean {
+  return /^(([0-9a-fA-F]{1,4}):){2,7}([0-9a-fA-F]{1,4})$/.test(address);
+}
+
+function normalizeQueryInput(value: string) {
+  let host = value.trim();
+
+  if (!host) {
+    return { host, isIp: false };
+  }
+
+  try {
+    const parsed = new URL(
+      host.includes("://") ? host : `https://${host}`
+    );
+    host = parsed.hostname;
+  } catch {
+    // Keep raw input if URL parsing fails
+  }
+
+  const normalized = host.replace(/^\[|\]$/g, "");
+  const isIp = isIpv4(normalized) || isIpv6(normalized);
+
+  return { host: normalized, isIp };
+}
+
+function buildSection(
+  type: SupportedRecordType,
+  records: DnsRecord[],
+  note?: string
+): QuerySection {
+  return {
+    type,
+    label: type,
+    records,
+    note,
+    id: `section-${type.toLowerCase()}`,
+  };
 }
 
 export default function DnsClient() {
@@ -78,11 +116,35 @@ export default function DnsClient() {
   const theme = useTheme();
 
   const [domain, setDomain] = useState("");
-  const [recordType, setRecordType] = useState<string>("A");
-  const [results, setResults] = useState<ApiResponse | null>(null);
+  const [sections, setSections] = useState<QuerySection[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [toast, setToast] = useState({ open: false, message: "" });
+
+  async function fetchDnsRecords(
+    type: SupportedRecordType,
+    host: string
+  ): Promise<DnsRecord[]> {
+    const url = `/api/dns?domain=${encodeURIComponent(
+      host
+    )}&type=${encodeURIComponent(type)}`;
+    const res = await fetch(url);
+    const data: ApiResponse = await res.json();
+
+    if (!res.ok) {
+      throw new Error(data.error || `HTTP ${res.status}`);
+    }
+
+    if (data.error) {
+      throw new Error(data.error);
+    }
+
+    return [
+      ...(data.Answer || []),
+      ...(data.Authority || []),
+      ...(data.Additional || []),
+    ];
+  }
 
   const handleLookup = async () => {
     const trimmed = domain.trim();
@@ -90,43 +152,154 @@ export default function DnsClient() {
 
     setLoading(true);
     setError(null);
-    setResults(null);
+    setSections([]);
+
+    const { host, isIp } = normalizeQueryInput(trimmed);
+
+    if (!host) {
+      setError(t.tools.dns.lookupFailed);
+      setLoading(false);
+      return;
+    }
+
+    const initialTypes = isIp ? ["PTR"] : [...QUERY_TYPES, "PTR"];
+    const initialSections = initialTypes.map((type) =>
+      buildSection(type as SupportedRecordType, [])
+    );
 
     try {
-      const url = `/api/dns?domain=${encodeURIComponent(trimmed)}&type=${recordType}`;
-      const res = await fetch(url);
-
-      const data: ApiResponse = await res.json();
-
-      if (!res.ok) {
-        setError(data.error || `HTTP ${res.status}`);
-        return;
-      }
-
-      if (data.error) {
-        setError(data.error);
-        return;
-      }
-
-      if (
-        !data.Answer?.length &&
-        !data.Authority?.length &&
-        !data.Additional?.length
-      ) {
-        setError(data.comment || t.tools.dns.noRecords);
-        setResults(data);
-        return;
-      }
-
-      setResults(data);
-    } catch (err) {
-      setError(
-        err instanceof Error ? err.message : t.tools.dns.lookupFailed
+      const settled = await Promise.allSettled(
+        initialTypes.map((type) =>
+          fetchDnsRecords(type as SupportedRecordType, host)
+        )
       );
+
+      const filledSections = initialSections.map((section, index) => {
+        const result = settled[index];
+        if (result.status === "fulfilled") {
+          return {
+            ...section,
+            records: result.value,
+          };
+        }
+
+        return {
+          ...section,
+          note:
+            result.reason instanceof Error
+              ? result.reason.message
+              : String(result.reason),
+        };
+      });
+
+      let finalSections = [...filledSections];
+
+      if (!isIp) {
+        const cnameSection = finalSections.find((sec) => sec.type === "CNAME");
+        const aSection = finalSections.find((sec) => sec.type === "A");
+        const aaaaSection = finalSections.find((sec) => sec.type === "AAAA");
+
+        const cnameTargets = Array.from(
+          new Set(cnameSection?.records.map((record) => record.data) || [])
+        ).filter(Boolean);
+
+        if (
+          cnameTargets.length > 0 &&
+          !(aSection?.records.length || aaaaSection?.records.length)
+        ) {
+          const followup = await Promise.allSettled(
+            cnameTargets.flatMap((target) =>
+              ["A", "AAAA"].map((type) =>
+                fetchDnsRecords(type as SupportedRecordType, target).then(
+                  (records) => ({ type, target, records })
+                )
+              )
+            )
+          );
+
+          followup.forEach((item) => {
+            if (item.status !== "fulfilled") {
+              return;
+            }
+            const section = finalSections.find(
+              (sec) => sec.type === item.value.type
+            );
+            if (section) {
+              section.records = [...section.records, ...item.value.records];
+            }
+          });
+        }
+
+        const discoveredIps = new Set(
+          finalSections
+            .filter((sec) => sec.type === "A" || sec.type === "AAAA")
+            .flatMap((sec) => sec.records.map((record) => record.data))
+        );
+
+        if (discoveredIps.size > 0) {
+          const ptrResults = await Promise.allSettled(
+            Array.from(discoveredIps).map((ip) =>
+              fetchDnsRecords("PTR" as SupportedRecordType, ip).then(
+                (records) => ({ ip, records })
+              )
+            )
+          );
+
+          const ptrSection = finalSections.find((sec) => sec.type === "PTR");
+
+          if (ptrSection) {
+            const ptrRecords = ptrResults
+              .filter(
+                (
+                  item
+                ): item is PromiseFulfilledResult<{
+                  ip: string;
+                  records: DnsRecord[];
+                }> => item.status === "fulfilled"
+              )
+              .flatMap((item) => item.value.records);
+
+            ptrSection.records = ptrRecords;
+
+            const rejected = ptrResults.filter(
+              (item) => item.status === "rejected"
+            ) as PromiseRejectedResult[];
+
+            if (rejected.length > 0 && ptrRecords.length === 0) {
+              ptrSection.note = rejected[0].reason
+                ? String(rejected[0].reason)
+                : t.tools.dns.noRecords;
+            }
+          }
+        }
+      }
+
+      const orderedSections = DISPLAY_ORDER.map((type) =>
+        finalSections.find((section) => section.type === type)
+      ).filter(Boolean) as QuerySection[];
+
+      const nonEmptySections = orderedSections.filter(
+        (section) => section.records.length > 0
+      );
+      const emptySections = orderedSections.filter(
+        (section) => section.records.length === 0
+      );
+
+      setSections([...nonEmptySections, ...emptySections]);
+
+      const hasRecords = orderedSections.some(
+        (section) => section.records.length > 0
+      );
+      if (!hasRecords && !isIp) {
+        setError(t.tools.dns.noRecords);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t.tools.dns.lookupFailed);
     } finally {
       setLoading(false);
     }
   };
+
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && domain.trim() && !loading) {
@@ -144,10 +317,16 @@ export default function DnsClient() {
   };
 
   const handleCopyAll = async () => {
-    if (!results?.Answer?.length) return;
-    const text = results.Answer.map(
-      (r) => `${r.name}\t${r.TTL}\tIN\t${r.type}\t${r.data}`
-    ).join("\n");
+    if (!sections.length) return;
+    const text = sections
+      .flatMap((section) =>
+        section.records.map(
+          (r) => `${r.name}\t${r.TTL}\tIN\t${r.type}\t${r.data}`
+        )
+      )
+      .join("\n");
+    if (!text) return;
+
     try {
       await navigator.clipboard.writeText(text);
       setToast({ open: true, message: t.tools.dns.copied });
@@ -156,11 +335,7 @@ export default function DnsClient() {
     }
   };
 
-  const allRecords = [
-    ...(results?.Answer || []),
-    ...(results?.Authority || []),
-    ...(results?.Additional || []),
-  ];
+  const hasResults = sections.length > 0;
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -224,26 +399,8 @@ export default function DnsClient() {
                   },
                 },
               }}
-              sx={{ flex: 3, minWidth: 240 }}
+              sx={{ flex: 1, minWidth: 240 }}
             />
-            <FormControl sx={{ flex: 1, minWidth: 120 }}>
-              <InputLabel id="record-type-label">
-                {t.tools.dns.recordType}
-              </InputLabel>
-              <Select
-                labelId="record-type-label"
-                value={recordType}
-                label={t.tools.dns.recordType}
-                onChange={(e) => setRecordType(e.target.value)}
-                sx={{ borderRadius: 2 }}
-              >
-                {RECORD_TYPES.map((type) => (
-                  <MenuItem key={type} value={type}>
-                    {getRecordTypeLabel(type, t.tools.dns.recordTypes)}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
             <Button
               variant="contained"
               onClick={handleLookup}
@@ -270,32 +427,11 @@ export default function DnsClient() {
             </Button>
           </Box>
 
-          {/* Quick Type Chips */}
-          <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap", mb: 3 }}>
-            {COMMON_TYPES.map((type) => (
-              <Chip
-                key={type}
-                label={type}
-                size="small"
-                variant={recordType === type ? "filled" : "outlined"}
-                color={recordType === type ? "primary" : "default"}
-                onClick={() => setRecordType(type)}
-                sx={{
-                  cursor: "pointer",
-                  fontFamily: "var(--font-jetbrains-mono), monospace",
-                  fontWeight: 600,
-                  borderRadius: 1.5,
-                  borderColor:
-                    recordType !== type ? "divider" : undefined,
-                }}
-              />
-            ))}
-          </Box>
 
           {/* Error */}
           {error && (
             <Alert
-              severity={results ? "warning" : "error"}
+              severity="error"
               sx={{ mb: 3, borderRadius: 2 }}
               onClose={() => setError(null)}
             >
@@ -303,328 +439,242 @@ export default function DnsClient() {
             </Alert>
           )}
 
-          {/* Results */}
-          {allRecords.length > 0 && (
-            <TableContainer
-              component={Paper}
+          {/* Quick nav */}
+          {hasResults && (
+            <Paper
               elevation={0}
               sx={{
                 border: 1,
                 borderColor: "divider",
                 borderRadius: 2,
-                overflow: "hidden",
+                py: 1,
+                px: 2,
                 mb: 3,
+                position: "sticky",
+                top: 16,
+                bgcolor: "background.paper",
+                zIndex: 1,
               }}
             >
-              <Box
-                sx={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  px: 2,
-                  py: 1.5,
-                  bgcolor: alpha(theme.palette.primary.main, 0.04),
-                  borderBottom: 1,
-                  borderColor: "divider",
-                }}
+              <Typography
+                variant="subtitle2"
+                sx={{ fontWeight: 700, mb: 1 }}
               >
-                <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
-                  {t.tools.dns.results}{" "}
-                  <Chip
-                    label={`${results?.Answer?.length || 0}`}
-                    size="small"
-                    color="primary"
-                    sx={{ ml: 1, fontWeight: 700 }}
-                  />
-                </Typography>
-                {results?.Answer?.length ? (
-                  <Button
-                    size="small"
-                    startIcon={<ContentCopyIcon sx={{ fontSize: 16 }} />}
-                    onClick={handleCopyAll}
-                    sx={{ textTransform: "none", borderRadius: 1.5 }}
-                  >
-                    {t.tools.dns.copyAll}
-                  </Button>
-                ) : null}
+                {t.tools.dns.quickNav}
+              </Typography>
+              <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
+                {sections.map((section) => {
+                  const count = section.records.length;
+                  const isEmpty = count === 0;
+                  return (
+                    <Button
+                      key={section.id}
+                      size="small"
+                      onClick={() => {
+                        document
+                          .getElementById(section.id)
+                          ?.scrollIntoView({ behavior: "smooth", block: "start" });
+                      }}
+                      color={isEmpty ? "error" : "primary"}
+                      variant={isEmpty ? "outlined" : "contained"}
+                      sx={{
+                        textTransform: "none",
+                        borderRadius: 1.5,
+                        fontFamily: "var(--font-jetbrains-mono), monospace",
+                      }}
+                    >
+                      {section.type}
+                      {count > 0 ? `(${count})` : ""}
+                    </Button>
+                  );
+                })}
               </Box>
-              <Table size="small">
-                <TableHead>
-                  <TableRow
+            </Paper>
+          )}
+
+          {/* Results */}
+          {hasResults && (
+            <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}> 
+              {sections.map((section) => (
+                <Paper
+                  key={section.id}
+                  id={section.id}
+                  elevation={0}
+                  sx={{
+                    border: 1,
+                    borderColor: "divider",
+                    borderRadius: 2,
+                    p: 2,
+                    bgcolor: alpha(theme.palette.background.paper, 0.96),
+                    scrollMarginTop: "120px",
+                  }}
+                >
+                  <Box
                     sx={{
-                      bgcolor: alpha(theme.palette.action.hover, 0.04),
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      mb: 1.5,
                     }}
                   >
-                    <TableCell
-                      sx={{ fontWeight: 700, minWidth: 100 }}
+                    <Typography
+                      variant="subtitle1"
+                      sx={{ fontWeight: 700 }}
                     >
-                      {t.tools.dns.section}
-                    </TableCell>
-                    <TableCell
-                      sx={{
-                        fontWeight: 700,
-                        fontFamily:
-                          "var(--font-jetbrains-mono), monospace",
+                      {t.tools.dns.recordSection}: {section.type}
+                    </Typography>
+                    <Button
+                      size="small"
+                      onClick={() => {
+                        const text = section.records
+                          .map(
+                            (record) =>
+                              `${record.name}\t${record.TTL}\tIN\t${record.type}\t${record.data}`
+                          )
+                          .join("\n");
+                        if (text) {
+                          handleCopy(text);
+                        }
                       }}
+                      sx={{ textTransform: "none" }}
                     >
-                      NAME
-                    </TableCell>
-                    <TableCell
-                      sx={{
-                        fontWeight: 700,
-                        fontFamily:
-                          "var(--font-jetbrains-mono), monospace",
-                      }}
-                    >
-                      TYPE
-                    </TableCell>
-                    <TableCell
-                      sx={{
-                        fontWeight: 700,
-                        fontFamily:
-                          "var(--font-jetbrains-mono), monospace",
-                      }}
-                    >
-                      TTL
-                    </TableCell>
-                    <TableCell
-                      sx={{
-                        fontWeight: 700,
-                        fontFamily:
-                          "var(--font-jetbrains-mono), monospace",
-                      }}
-                    >
-                      DATA
-                    </TableCell>
-                    <TableCell sx={{ fontWeight: 700, width: 48 }} />
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {results?.Answer?.map((record, idx) => (
-                    <TableRow
-                      key={`answer-${idx}`}
-                      sx={{
-                        "&:last-child td": { border: 0 },
-                        ...(idx % 2 === 0
-                          ? {
-                              bgcolor: alpha(
-                                theme.palette.action.hover,
-                                0.02
-                              ),
-                            }
-                          : {}),
-                      }}
-                    >
-                      <TableCell>
-                        <Chip
-                          label={t.tools.dns.answer}
-                          size="small"
-                          color="success"
-                          variant="outlined"
-                          sx={{ fontWeight: 600 }}
-                        />
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          fontFamily:
-                            "var(--font-jetbrains-mono), monospace",
-                          fontSize: "0.85rem",
-                          wordBreak: "break-all",
-                        }}
-                      >
-                        {record.name}
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          fontFamily:
-                            "var(--font-jetbrains-mono), monospace",
-                          fontSize: "0.85rem",
-                        }}
-                      >
-                        {record.type}
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          fontFamily:
-                            "var(--font-jetbrains-mono), monospace",
-                          fontSize: "0.85rem",
-                        }}
-                      >
-                        {record.TTL}
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          fontFamily:
-                            "var(--font-jetbrains-mono), monospace",
-                          fontSize: "0.85rem",
-                          wordBreak: "break-all",
-                          maxWidth: 360,
-                        }}
-                      >
-                        {record.data}
-                      </TableCell>
-                      <TableCell>
-                        <Button
-                          size="small"
-                          onClick={() => handleCopy(record.data)}
+                      {t.tools.dns.copyAll}
+                    </Button>
+                  </Box>
+
+                  {section.records.length > 0 ? (
+                    <Table size="small">
+                      <TableHead>
+                        <TableRow
                           sx={{
-                            minWidth: 36,
-                            p: 0.5,
-                            borderRadius: 1,
+                            bgcolor: alpha(theme.palette.action.hover, 0.04),
                           }}
                         >
-                          <ContentCopyIcon sx={{ fontSize: 14 }} />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                  {results?.Authority?.map((record, idx) => (
-                    <TableRow
-                      key={`auth-${idx}`}
+                          <TableCell
+                            sx={{
+                              fontWeight: 700,
+                              fontFamily: "var(--font-jetbrains-mono), monospace",
+                            }}
+                          >
+                            NAME
+                          </TableCell>
+                          <TableCell
+                            sx={{
+                              fontWeight: 700,
+                              fontFamily: "var(--font-jetbrains-mono), monospace",
+                            }}
+                          >
+                            TYPE
+                          </TableCell>
+                          <TableCell
+                            sx={{
+                              fontWeight: 700,
+                              fontFamily: "var(--font-jetbrains-mono), monospace",
+                            }}
+                          >
+                            TTL
+                          </TableCell>
+                          <TableCell
+                            sx={{
+                              fontWeight: 700,
+                              fontFamily: "var(--font-jetbrains-mono), monospace",
+                            }}
+                          >
+                            DATA
+                          </TableCell>
+                          <TableCell sx={{ fontWeight: 700, width: 48 }} />
+                        </TableRow>
+                      </TableHead>
+                      <TableBody>
+                        {section.records.map((record, idx) => (
+                          <TableRow
+                            key={`${section.type}-${idx}`}
+                            sx={{
+                              "&:last-child td": { border: 0 },
+                              ...(idx % 2 === 0
+                                ? {
+                                    bgcolor: alpha(
+                                      theme.palette.action.hover,
+                                      0.02
+                                    ),
+                                  }
+                                : {}),
+                            }}
+                          >
+                            <TableCell
+                              sx={{
+                                fontFamily:
+                                  "var(--font-jetbrains-mono), monospace",
+                                fontSize: "0.85rem",
+                                wordBreak: "break-all",
+                              }}
+                            >
+                              {record.name}
+                            </TableCell>
+                            <TableCell
+                              sx={{
+                                fontFamily:
+                                  "var(--font-jetbrains-mono), monospace",
+                                fontSize: "0.85rem",
+                              }}
+                            >
+                              {record.type}
+                            </TableCell>
+                            <TableCell
+                              sx={{
+                                fontFamily:
+                                  "var(--font-jetbrains-mono), monospace",
+                                fontSize: "0.85rem",
+                              }}
+                            >
+                              {record.TTL}
+                            </TableCell>
+                            <TableCell
+                              sx={{
+                                fontFamily:
+                                  "var(--font-jetbrains-mono), monospace",
+                                fontSize: "0.85rem",
+                                wordBreak: "break-all",
+                                maxWidth: 360,
+                              }}
+                            >
+                              {record.data}
+                            </TableCell>
+                            <TableCell>
+                              <Button
+                                size="small"
+                                onClick={() => handleCopy(record.data)}
+                                sx={{
+                                  minWidth: 36,
+                                  p: 0.5,
+                                  borderRadius: 1,
+                                }}
+                              >
+                                <ContentCopyIcon sx={{ fontSize: 14 }} />
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  ) : (
+                    <Typography
+                      variant="body2"
                       sx={{
-                        "&:last-child td": { border: 0 },
+                        color: "text.secondary",
+                        fontSize: "0.85rem",
                       }}
                     >
-                      <TableCell>
-                        <Chip
-                          label={t.tools.dns.authority}
-                          size="small"
-                          color="warning"
-                          variant="outlined"
-                          sx={{ fontWeight: 600 }}
-                        />
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          fontFamily:
-                            "var(--font-jetbrains-mono), monospace",
-                          fontSize: "0.85rem",
-                          wordBreak: "break-all",
-                        }}
-                      >
-                        {record.name}
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          fontFamily:
-                            "var(--font-jetbrains-mono), monospace",
-                          fontSize: "0.85rem",
-                        }}
-                      >
-                        {record.type}
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          fontFamily:
-                            "var(--font-jetbrains-mono), monospace",
-                          fontSize: "0.85rem",
-                        }}
-                      >
-                        {record.TTL}
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          fontFamily:
-                            "var(--font-jetbrains-mono), monospace",
-                          fontSize: "0.85rem",
-                          wordBreak: "break-all",
-                          maxWidth: 360,
-                        }}
-                      >
-                        {record.data}
-                      </TableCell>
-                      <TableCell>
-                        <Button
-                          size="small"
-                          onClick={() => handleCopy(record.data)}
-                          sx={{
-                            minWidth: 36,
-                            p: 0.5,
-                            borderRadius: 1,
-                          }}
-                        >
-                          <ContentCopyIcon sx={{ fontSize: 14 }} />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                  {results?.Additional?.map((record, idx) => (
-                    <TableRow
-                      key={`add-${idx}`}
-                      sx={{
-                        "&:last-child td": { border: 0 },
-                      }}
-                    >
-                      <TableCell>
-                        <Chip
-                          label={t.tools.dns.additional}
-                          size="small"
-                          color="info"
-                          variant="outlined"
-                          sx={{ fontWeight: 600 }}
-                        />
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          fontFamily:
-                            "var(--font-jetbrains-mono), monospace",
-                          fontSize: "0.85rem",
-                          wordBreak: "break-all",
-                        }}
-                      >
-                        {record.name}
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          fontFamily:
-                            "var(--font-jetbrains-mono), monospace",
-                          fontSize: "0.85rem",
-                        }}
-                      >
-                        {record.type}
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          fontFamily:
-                            "var(--font-jetbrains-mono), monospace",
-                          fontSize: "0.85rem",
-                        }}
-                      >
-                        {record.TTL}
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          fontFamily:
-                            "var(--font-jetbrains-mono), monospace",
-                          fontSize: "0.85rem",
-                          wordBreak: "break-all",
-                          maxWidth: 360,
-                        }}
-                      >
-                        {record.data}
-                      </TableCell>
-                      <TableCell>
-                        <Button
-                          size="small"
-                          onClick={() => handleCopy(record.data)}
-                          sx={{
-                            minWidth: 36,
-                            p: 0.5,
-                            borderRadius: 1,
-                          }}
-                        >
-                          <ContentCopyIcon sx={{ fontSize: 14 }} />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </TableContainer>
+                      {section.note || t.tools.dns.empty}
+                    </Typography>
+                  )}
+                </Paper>
+              ))}
+            </Box>
           )}
 
           {/* Empty state */}
-          {!results && !loading && !error && (
+          {!hasResults && !loading && !error && (
             <Box
               sx={{
                 textAlign: "center",
