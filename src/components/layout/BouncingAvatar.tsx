@@ -34,7 +34,7 @@ export default function BouncingAvatar() {
 
   // Start when user clicks footer avatar
   useEffect(() => {
-    const avatarEl = document.querySelector('footer img[alt="dragonren"]');
+    const avatarEl = document.querySelector('footer img[alt="jadren"]');
     const handleClick = () => {
       if (hasStarted.current) return;
       hasStarted.current = true;

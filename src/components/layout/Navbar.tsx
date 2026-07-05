@@ -59,7 +59,7 @@ export default function Navbar() {
             component={Link}
             href="/"
             src="/avatar.png"
-            alt="dragonren"
+            alt="jadren"
             sx={{ width: 32, height: 32, flexShrink: 0, flexGrow: 0 }}
           />
 
@@ -137,12 +137,12 @@ export default function Navbar() {
             <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
               <Avatar
                 src="/avatar.png"
-                alt="dragonren"
+                alt="jadren"
                 sx={{ width: 40, height: 40 }}
               />
               <Box>
                 <Typography variant="subtitle1" sx={{ fontWeight: 600, lineHeight: 1.2 }}>
-                  dragonren
+                  jadren
                 </Typography>
                 <Typography variant="caption" color="text.secondary">
                   jaden@jadren.moe
