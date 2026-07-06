@@ -39,7 +39,7 @@ jobs:
           echo "SSH_AGENT_PID=$SSH_AGENT_PID" >> $GITHUB_ENV
           
           # Load Private Key safely
-          echo 'echo "$SSH_PASSPHRASE"' > ~/.ssh/askpass.sh
+          echo 'echo "$SSH_KEY_PASSPHRASE"' > ~/.ssh/askpass.sh
           chmod +x ~/.ssh/askpass.sh
           echo "$SSH_PRIVATE_KEY" | DISPLAY=None SSH_ASKPASS=~/.ssh/askpass.sh ssh-add - >/dev/null
           rm -f ~/.ssh/askpass.sh
@@ -59,7 +59,7 @@ jobs:
           # Actual scan for the known_hosts file
           ssh-keyscan -4 -H "$SSH_HOST" >> ~/.ssh/known_hosts
         env:
-          SSH_PASSPHRASE: ${{ secrets.SSH_PASSPHRASE }}
+          SSH_KEY_PASSPHRASE: ${{ secrets.SSH_KEY_PASSPHRASE }}
           SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
           SSH_HOST: ${{ secrets.SSH_HOST }}
 
