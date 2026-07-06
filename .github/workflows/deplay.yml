@@ -18,29 +18,23 @@ jobs:
         with:
           bun-version: latest
 
-      - name: Build & Pack Locally
+      - name: Build and Pack
         run: |
-          echo "Building locally..."
           bun install
           bun --bun run build
-          
-          echo "Packing build..."
-          tar -czf /tmp/blog-build.tar.gz build
-          echo "Archive Size: $(du -h /tmp/blog-build.tar.gz | cut -f1)"
+          tar -czf blog-build.tar.gz build
 
-
-      - name: 📦 Upload Archive via SCP
+      - name: Upload Archive
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           passphrase: ${{ secrets.SSH_KEY_PASSPHRASE }}
-          source: "/tmp/blog-build.tar.gz"
-          target: "/tmp"
-          strip_components:
+          source: "blog-build.tar.gz"
+          target: "~/"
 
-      - name: ⚙️ Sync, Extract & Restart Service
+      - name: Sync and Restart
         uses: appleboy/ssh-action@v1.0.3
         env:
           WORK_PATH: ${{ secrets.WORK_PATH }}
@@ -50,30 +44,17 @@ jobs:
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           passphrase: ${{ secrets.SSH_KEY_PASSPHRASE }}
-          envs: WORK_PATH,DNS_MANAGER_TOKEN 
+          envs: WORK_PATH,DNS_MANAGER_TOKEN
           script: |
             set -e
             cd $WORK_PATH
             export PATH="$HOME/.bun/bin:$PATH"
-            
-            echo "  → [1/5] Fetching & Resetting Repository..."
             git fetch origin run
             git checkout run
             git reset --hard origin/run
-            
-            echo "  → [2/5] Installing Dependencies..."
             bun --bun --smol install
-            
-            echo "  → [3/5] Extracting New Build..."
             rm -rf build
-            tar -xzf /tmp/blog-build.tar.gz
-            rm -f /tmp/blog-build.tar.gz
-            
-            echo "  → [4/5] Updating Environment Variables..."
+            tar -xzf ~/blog-build.tar.gz
+            rm -f ~/blog-build.tar.gz
             echo "DNS_MANAGER_TOKEN=$DNS_MANAGER_TOKEN" >> .env
-            
-            echo "  → [5/5] Restarting Systemd Service..."
             sudo systemctl restart dra-tool.service
-            sleep 1
-            
-            echo "🚀 Deploy Complete & Service Started!"
