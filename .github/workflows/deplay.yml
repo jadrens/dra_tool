@@ -53,7 +53,7 @@ jobs:
           echo "=== DEBUG: Executing verbose connection test ==="
           # -v flags will print exact handshake/network details directly to the console
           # without suppressing errors or redirecting output.
-          ssh-keyscan -v -4 -H "$SSH_HOST"
+          ssh-keyscan -v -4 -H "$SSH_HOST" || true
           echo "=== DEBUG: End of connection test ==="
           
           # Actual scan for the known_hosts file
