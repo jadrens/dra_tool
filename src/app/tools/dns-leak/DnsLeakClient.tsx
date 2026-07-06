@@ -88,7 +88,7 @@ function generateDomains(count: number): string[] {
   const salt = Math.random().toString(36).slice(2, 8);
   const domains: string[] = [];
   for (let i = 0; i < count; i++) {
-    domains.push(`${now.toString(36)}${salt}${i.toString(36)}.track.rayou.me`);
+    domains.push(`${now.toString(36)}${salt}${i.toString(36)}.track.rayne.cn`);
   }
   return domains;
 }
