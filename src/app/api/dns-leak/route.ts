@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 
 const API_BASE = "https://hkns.rayou.me";
 
-// Domain must match *.track.rayou.me
-const TRACK_DOMAIN_RE = /^[a-z0-9]+[a-z0-9\-]*[a-z0-9]\.track\.rayou\.me$/i;
+// Domain must match *.track.rayne.cn
+const TRACK_DOMAIN_RE = /^[a-z0-9]+[a-z0-9\-]*[a-z0-9]\.track\.=rayne\.cn$/i;
 
 interface QueryItem {
   id?: number;
@@ -65,12 +65,12 @@ export async function POST(request: NextRequest) {
 
     const { domains } = body as { domains: string[] };
 
-    // Strict domain validation — only *.track.rayou.me
+    // Strict domain validation — only *.track.rayne.cn
     for (const domain of domains) {
       if (typeof domain !== "string" || !TRACK_DOMAIN_RE.test(domain)) {
         return NextResponse.json(
           {
-            error: `Invalid domain "${domain}". Only *.track.rayou.me subdomains (alphanumeric + hyphens) are allowed.`,
+            error: `Invalid domain "${domain}". Only *.track.rayne.cn subdomains (alphanumeric + hyphens) are allowed.`,
           },
           { status: 403 }
         );
