@@ -28,28 +28,40 @@ jobs:
           tar -czf /tmp/blog-build.tar.gz build
           echo "Archive Size: $(du -h /tmp/blog-build.tar.gz | cut -f1)"
 
-      - name: Setup SSH Agent with Passphrase
-        env:
-          SSH_PASSPHRASE: ${{ secrets.SSH_KEY_PASSPHRASE }}
-          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
-          SSH_HOST: ${{ secrets.SSH_HOST }}
+      - name: Setup SSH with Verbose Debugging
         run: |
           mkdir -p ~/.ssh
           chmod 700 ~/.ssh
           
+          # Initialize SSH Agent
           eval $(ssh-agent -s)
           echo "SSH_AUTH_SOCK=$SSH_AUTH_SOCK" >> $GITHUB_ENV
           echo "SSH_AGENT_PID=$SSH_AGENT_PID" >> $GITHUB_ENV
           
+          # Load Private Key safely
           echo 'echo "$SSH_PASSPHRASE"' > ~/.ssh/askpass.sh
           chmod +x ~/.ssh/askpass.sh
-          
           echo "$SSH_PRIVATE_KEY" | DISPLAY=None SSH_ASKPASS=~/.ssh/askpass.sh ssh-add - >/dev/null
-          
           rm -f ~/.ssh/askpass.sh
           
-          # skip the ask
-          ssh-keyscan -4 -H $SSH_HOST >> ~/.ssh/known_hosts
+          # Validate Env Variable smoothly
+          if [ -z "$SSH_HOST" ]; then
+            echo "ERROR: SSH_HOST secret is empty or missing!"
+            exit 1
+          fi
+          
+          echo "=== DEBUG: Executing verbose connection test ==="
+          # -v flags will print exact handshake/network details directly to the console
+          # without suppressing errors or redirecting output.
+          ssh-keyscan -v -4 -H "$SSH_HOST"
+          echo "=== DEBUG: End of connection test ==="
+          
+          # Actual scan for the known_hosts file
+          ssh-keyscan -4 -H "$SSH_HOST" >> ~/.ssh/known_hosts
+        env:
+          SSH_PASSPHRASE: ${{ secrets.SSH_PASSPHRASE }}
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          SSH_HOST: ${{ secrets.SSH_HOST }}
 
       - name: Sync Remote Repo & Install Deps
         env:
