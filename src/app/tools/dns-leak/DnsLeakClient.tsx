@@ -298,7 +298,8 @@ export default function DnsLeakClient() {
     );
     await Promise.all(probes);
 
-    // ── step 2: fire 10 individual API calls immediately, no waiting ──
+    // ── step 2: wait 1s then fire 10 individual API calls ──
+    await new Promise((resolve) => setTimeout(resolve, 1000));
     setPhase("streaming");
     newDomains.forEach((domain) => fetchDomainResult(domain));
   }, [fetchDomainResult]);
