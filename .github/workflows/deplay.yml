@@ -59,16 +59,20 @@ jobs:
 
           rm -f ~/.ssh/askpass.sh
 
-          # Add host key (fail gracefully if host not reachable)
-          ssh-keyscan -H "$SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null || {
-            echo "::warning::ssh-keyscan failed for $SSH_HOST, adding with StrictHostKeyChecking=accept-new"
-          }
+          # Add host key — retry with longer timeout if first attempt fails
+          ssh-keyscan -H -T 15 "$SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null || \
+            ssh-keyscan -H -T 30 "$SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null || \
+            echo "::warning::ssh-keyscan failed for $SSH_HOST"
+
+          # Shared SSH opts: accept-new in case keyscan failed, timeouts to prevent hangs
+          SSH_OPTS="-o StrictHostKeyChecking=accept-new -o ConnectTimeout=15 -o ServerAliveInterval=30"
+          echo "SSH_OPTS=$SSH_OPTS" >> $GITHUB_ENV
 
       - name: Sync Remote Repo & Install Deps
         env:
           WORK_PATH: ${{ secrets.WORK_PATH }}
         run: |
-          ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "bash -s" << 'ENDSSH'
+          ssh $SSH_OPTS ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "bash -s" << 'ENDSSH'
             set -e
             cd ${{ secrets.WORK_PATH }}
             export PATH="$HOME/.bun/bin:$PATH"
@@ -85,11 +89,11 @@ jobs:
       - name: Upload archive via rsync
         run: |
           echo "Uploading archive..."
-          rsync -aP --no-i-r -e "ssh" /tmp/blog-build.tar.gz ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/tmp/blog-build.tar.gz
+          rsync -aP --no-i-r -e "ssh $SSH_OPTS" /tmp/blog-build.tar.gz ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/tmp/blog-build.tar.gz
 
       - name: Extract Archive & Restart Service
         run: |
-          ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "bash -s" << 'ENDSSH'
+          ssh $SSH_OPTS ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "bash -s" << 'ENDSSH'
             set -e
             cd ${{ secrets.WORK_PATH }}
             
