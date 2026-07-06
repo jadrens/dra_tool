@@ -20,6 +20,8 @@ import type {
 } from "./types";
 
 const STORAGE_KEY_TOKEN = "dns-manager-token";
+const STORAGE_KEY_API_BASE = "dns-manager-api-base";
+const DEFAULT_API_BASE = "https://hkns.rayou.me";
 
 // --- Token helpers (localStorage) ---
 
@@ -42,9 +44,24 @@ export function hasToken(): boolean {
   return !!getToken();
 }
 
-// --- Low-level fetch wrapper ---
+// --- API base URL helpers (localStorage) ---
 
-const API_BASE = "https://hkns.rayou.me";
+export function getApiBase(): string {
+  if (typeof window === "undefined") return DEFAULT_API_BASE;
+  return localStorage.getItem(STORAGE_KEY_API_BASE) || DEFAULT_API_BASE;
+}
+
+export function setApiBase(url: string): void {
+  if (typeof window === "undefined") return;
+  localStorage.setItem(STORAGE_KEY_API_BASE, url.replace(/\/+$/, ""));
+}
+
+export function resetApiBase(): void {
+  if (typeof window === "undefined") return;
+  localStorage.removeItem(STORAGE_KEY_API_BASE);
+}
+
+// --- Low-level fetch wrapper ---
 
 async function apiFetch<T>(
   path: string,
@@ -61,7 +78,7 @@ async function apiFetch<T>(
   // Remove so we don't double-merge
   delete (options as Record<string, unknown>).headers;
 
-  const res = await fetch(`${API_BASE}${path}`, {
+  const res = await fetch(`${getApiBase()}${path}`, {
     ...options,
     headers,
   });

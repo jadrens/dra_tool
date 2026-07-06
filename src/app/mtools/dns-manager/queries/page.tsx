@@ -702,6 +702,15 @@ export default function QueriesPage() {
                       fontSize: "0.8rem",
                     }}
                   >
+                    Cached
+                  </TableCell>
+                  <TableCell
+                    sx={{
+                      fontWeight: 700,
+                      fontFamily: "var(--font-jetbrains-mono), monospace",
+                      fontSize: "0.8rem",
+                    }}
+                  >
                     EDNS
                   </TableCell>
                   <TableCell
@@ -809,6 +818,24 @@ export default function QueriesPage() {
                       }}
                     >
                       {item.city || "-"}
+                    </TableCell>
+                    <TableCell
+                      sx={{
+                        fontFamily: "var(--font-jetbrains-mono), monospace",
+                        fontSize: "0.8rem",
+                      }}
+                    >
+                      {item.geo_cached ? (
+                        <Chip
+                          icon={<CachedIcon sx={{ fontSize: 12 }} />}
+                          label="Yes"
+                          size="small"
+                          color="success"
+                          variant="outlined"
+                        />
+                      ) : (
+                        <Typography variant="caption" color="text.disabled">No</Typography>
+                      )}
                     </TableCell>
                     <TableCell
                       sx={{

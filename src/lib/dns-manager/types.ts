@@ -37,7 +37,9 @@ export interface StatsResponse {
     | { enabled: false }
     | {
         queue_len: number;
-        total_rows: number;
+        total_queries: number;
+        cache_hited: number;
+        dropped: number;
       };
 }
 

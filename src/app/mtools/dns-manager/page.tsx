@@ -22,9 +22,11 @@ import {
   Snackbar,
 } from "@mui/material";
 import DnsIcon from "@mui/icons-material/Dns";
-import StorageIcon from "@mui/icons-material/Storage";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import ErrorIcon from "@mui/icons-material/Error";
+import CachedIcon from "@mui/icons-material/Cached";
+import WarningAmberIcon from "@mui/icons-material/WarningAmber";
+import BarChartIcon from "@mui/icons-material/BarChart";
 import { alpha } from "@mui/material";
 import { hasToken, getStats, listZones, checkHealth, getServerConfig, updateServerConfig } from "@/lib/dns-manager/api";
 import type { StatsResponse, ZoneListResponse, ServerConfig } from "@/lib/dns-manager/types";
@@ -125,7 +127,7 @@ export default function DnsManagerDashboard() {
 
       <Grid container spacing={3}>
         {/* Health card */}
-        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+        <Grid size={{ xs: 12, sm: 6, md: 6 }}>
           <Card
             elevation={0}
             sx={{
@@ -169,7 +171,7 @@ export default function DnsManagerDashboard() {
         </Grid>
 
         {/* Zone count */}
-        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+        <Grid size={{ xs: 12, sm: 6, md: 6 }}>
           <Card
             elevation={0}
             sx={{
@@ -203,56 +205,8 @@ export default function DnsManagerDashboard() {
           </Card>
         </Grid>
 
-        {/* Recorder status */}
-        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-          <Card
-            elevation={0}
-            sx={{
-              height: "100%",
-              border: 1,
-              borderColor: "divider",
-              borderRadius: 2,
-              bgcolor: alpha(
-                stats?.recorder && "queue_len" in stats.recorder
-                  ? theme.palette.success.main
-                  : theme.palette.warning.main,
-                0.04
-              ),
-            }}
-          >
-            <CardContent
-              sx={{
-                height: "100%",
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: 1,
-                py: 3,
-                "&:last-child": { pb: 3 },
-              }}
-            >
-              <StorageIcon
-                sx={{
-                  fontSize: 40,
-                  color:
-                    stats?.recorder && "queue_len" in stats.recorder
-                      ? "success.main"
-                      : "warning.main",
-                }}
-              />
-              <Typography variant="h5" sx={{ fontWeight: 700, fontFamily: "var(--font-inter)" }}>
-                {stats?.recorder && "queue_len" in stats.recorder ? "Enabled" : "Disabled"}
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Recorder
-              </Typography>
-            </CardContent>
-          </Card>
-        </Grid>
-
-        {/* Total rows */}
-        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+        {/* Total queries */}
+        <Grid size={{ xs: 12, sm: 6, md: 4 }}>
           <Card
             elevation={0}
             sx={{
@@ -275,7 +229,7 @@ export default function DnsManagerDashboard() {
                 "&:last-child": { pb: 3 },
               }}
             >
-              <StorageIcon sx={{ fontSize: 40, color: "info.main" }} />
+              <BarChartIcon sx={{ fontSize: 40, color: "info.main" }} />
               <Typography
                 variant="h5"
                 sx={{
@@ -284,12 +238,113 @@ export default function DnsManagerDashboard() {
                   color: "info.main",
                 }}
               >
-                {stats?.recorder && "total_rows" in stats.recorder
-                  ? stats.recorder.total_rows.toLocaleString()
+                {stats?.recorder && "total_queries" in stats.recorder
+                  ? stats.recorder.total_queries.toLocaleString()
                   : "-"}
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                Recorded Queries
+                Total Queries
+              </Typography>
+            </CardContent>
+          </Card>
+        </Grid>
+
+        {/* Cache hited + hit rate */}
+        <Grid size={{ xs: 12, sm: 6, md: 4 }}>
+          <Card
+            elevation={0}
+            sx={{
+              height: "100%",
+              border: 1,
+              borderColor: "divider",
+              borderRadius: 2,
+              bgcolor: alpha(theme.palette.success.main, 0.04),
+            }}
+          >
+            <CardContent
+              sx={{
+                height: "100%",
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 0.5,
+                py: 3,
+                "&:last-child": { pb: 3 },
+              }}
+            >
+              <CachedIcon sx={{ fontSize: 40, color: "success.main" }} />
+              <Typography
+                variant="h5"
+                sx={{
+                  fontWeight: 700,
+                  fontFamily: "var(--font-inter)",
+                  color: "success.main",
+                }}
+              >
+                {stats?.recorder && "cache_hited" in stats.recorder
+                  ? stats.recorder.cache_hited.toLocaleString()
+                  : "-"}
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Cache Hited
+              </Typography>
+              {stats?.recorder && "cache_hited" in stats.recorder && stats.recorder.total_queries > 0 && (
+                <Typography
+                  variant="body1"
+                  sx={{
+                    fontWeight: 700,
+                    fontFamily: "var(--font-inter)",
+                    color: "success.main",
+                    mt: 0.5,
+                  }}
+                >
+                  {((stats.recorder.cache_hited / stats.recorder.total_queries) * 100).toFixed(1)}% hit rate
+                </Typography>
+              )}
+            </CardContent>
+          </Card>
+        </Grid>
+
+        {/* Dropped */}
+        <Grid size={{ xs: 12, sm: 6, md: 4 }}>
+          <Card
+            elevation={0}
+            sx={{
+              height: "100%",
+              border: 1,
+              borderColor: "divider",
+              borderRadius: 2,
+              bgcolor: alpha(theme.palette.error.main, 0.04),
+            }}
+          >
+            <CardContent
+              sx={{
+                height: "100%",
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 1,
+                py: 3,
+                "&:last-child": { pb: 3 },
+              }}
+            >
+              <WarningAmberIcon sx={{ fontSize: 40, color: "error.main" }} />
+              <Typography
+                variant="h5"
+                sx={{
+                  fontWeight: 700,
+                  fontFamily: "var(--font-inter)",
+                  color: "error.main",
+                }}
+              >
+                {stats?.recorder && "dropped" in stats.recorder
+                  ? stats.recorder.dropped.toLocaleString()
+                  : "-"}
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Dropped
               </Typography>
             </CardContent>
           </Card>

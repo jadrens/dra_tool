@@ -14,9 +14,16 @@ import {
   ListItemButton,
   ListItemText,
   Avatar,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  TextField,
+  Tooltip,
   useMediaQuery,
   useTheme,
 } from "@mui/material";
+import EditIcon from "@mui/icons-material/Edit";
 import MenuIcon from "@mui/icons-material/Menu";
 import CloseIcon from "@mui/icons-material/Close";
 import DashboardIcon from "@mui/icons-material/Dashboard";
@@ -29,7 +36,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { alpha } from "@mui/material";
 import TokenDialog from "@/lib/dns-manager/TokenDialog";
-import { hasToken, removeToken } from "@/lib/dns-manager/api";
+import { hasToken, removeToken, getApiBase, setApiBase } from "@/lib/dns-manager/api";
 import React from "react";
 
 const navItems = [
@@ -74,6 +81,8 @@ export default function DnsManagerLayout({
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [authKey, setAuthKey] = useState(0);
+  const [endpointOpen, setEndpointOpen] = useState(false);
+  const [endpointInput, setEndpointInput] = useState(getApiBase());
   const pathname = usePathname();
   const router = useRouter();
 
@@ -85,6 +94,19 @@ export default function DnsManagerLayout({
     removeToken();
     router.push("/mtools/dns-manager");
     setAuthKey((k) => k + 1);
+  };
+
+  const handleOpenEndpoint = () => {
+    setEndpointInput(getApiBase());
+    setEndpointOpen(true);
+  };
+
+  const handleSaveEndpoint = () => {
+    const val = endpointInput.trim().replace(/\/+$/, "");
+    if (val) {
+      setApiBase(val);
+    }
+    setEndpointOpen(false);
   };
 
   const isActive = (href: string) => {
@@ -170,6 +192,23 @@ export default function DnsManagerLayout({
                 >
                   Logout
                 </Button>
+                <Tooltip title="Change API endpoint">
+                  <Button
+                    size="small"
+                    startIcon={<EditIcon sx={{ fontSize: 14 }} />}
+                    onClick={handleOpenEndpoint}
+                    sx={{
+                      textTransform: "none",
+                      borderRadius: 2,
+                      fontFamily: "var(--font-jetbrains-mono), monospace",
+                      fontSize: "0.75rem",
+                      color: "text.secondary",
+                      ml: 0.5,
+                    }}
+                  >
+                    {getApiBase().replace(/^https?:\/\//, "")}
+                  </Button>
+                </Tooltip>
               </Box>
             )}
           </Toolbar>
@@ -291,6 +330,45 @@ export default function DnsManagerLayout({
           {children}
         </Box>
       </Box>
+
+      {/* Endpoint editor dialog */}
+      <Dialog
+        open={endpointOpen}
+        onClose={() => setEndpointOpen(false)}
+        maxWidth="sm"
+        fullWidth
+        slotProps={{ paper: { sx: { borderRadius: 3 } } }}
+      >
+        <DialogTitle sx={{ fontWeight: 700, fontFamily: "var(--font-inter)" }}>
+          API Endpoint
+        </DialogTitle>
+        <DialogContent>
+          <TextField
+            autoFocus
+            fullWidth
+            value={endpointInput}
+            onChange={(e) => setEndpointInput(e.target.value)}
+            placeholder="https://hkns.rayou.me"
+            onKeyDown={(e) => { if (e.key === "Enter") handleSaveEndpoint(); }}
+            slotProps={{
+              input: {
+                sx: { fontFamily: "var(--font-jetbrains-mono), monospace", borderRadius: 2, mt: 1 },
+              },
+            }}
+          />
+          <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: "block" }}>
+            The base URL of your DNS Server API. Saved to localStorage.
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button onClick={() => setEndpointOpen(false)} sx={{ textTransform: "none", borderRadius: 2 }}>
+            Cancel
+          </Button>
+          <Button variant="contained" onClick={handleSaveEndpoint} sx={{ textTransform: "none", borderRadius: 2 }}>
+            Save
+          </Button>
+        </DialogActions>
+      </Dialog>
     </>
   );
 }

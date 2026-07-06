@@ -28,6 +28,8 @@ import {
   AccordionDetails,
   Switch,
   FormControlLabel,
+  Checkbox,
+  InputAdornment,
   useTheme,
 } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
@@ -36,6 +38,7 @@ import DeleteIcon from "@mui/icons-material/Delete";
 import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import CloseIcon from "@mui/icons-material/Close";
+import SearchIcon from "@mui/icons-material/Search";
 import { alpha } from "@mui/material";
 import {
   hasToken,
@@ -75,6 +78,26 @@ export default function ZonesPage() {
   const [zones, setZones] = useState<Zone[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+
+  // Search
+  const [searchQuery, setSearchQuery] = useState("");
+
+  // Selection
+  const [selectedPatterns, setSelectedPatterns] = useState<Set<string>>(new Set());
+
+  // Batch delete
+  const [batchDeleteOpen, setBatchDeleteOpen] = useState(false);
+  const [batchDeleting, setBatchDeleting] = useState(false);
+
+  // Filtered zones
+  const filteredZones = zones.filter((z) => {
+    if (!searchQuery.trim()) return true;
+    const q = searchQuery.trim().toLowerCase();
+    return z.pattern.toLowerCase().includes(q);
+  });
+
+  // Clear selection when search changes
+  const clearSelection = () => setSelectedPatterns(new Set());
 
   // Editor dialog
   const [editorOpen, setEditorOpen] = useState(false);
@@ -312,6 +335,50 @@ export default function ZonesPage() {
     }
   };
 
+  // --- Selection helpers ---
+
+  const toggleSelect = (pattern: string) => {
+    setSelectedPatterns((prev) => {
+      const next = new Set(prev);
+      if (next.has(pattern)) next.delete(pattern);
+      else next.add(pattern);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    const allPatterns = filteredZones.map((z) => z.pattern);
+    if (allPatterns.every((p) => selectedPatterns.has(p))) {
+      setSelectedPatterns(new Set());
+    } else {
+      setSelectedPatterns(new Set(allPatterns));
+    }
+  };
+
+  const isAllSelected = filteredZones.length > 0 && filteredZones.every((z) => selectedPatterns.has(z.pattern));
+  const isIndeterminate = filteredZones.some((z) => selectedPatterns.has(z.pattern)) && !isAllSelected;
+
+  // --- Batch delete ---
+
+  const handleBatchDelete = async () => {
+    if (selectedPatterns.size === 0) return;
+    setBatchDeleting(true);
+    let deleted = 0;
+    for (const pattern of selectedPatterns) {
+      try {
+        await deleteZone(pattern);
+        deleted++;
+      } catch {
+        // continue with remaining
+      }
+    }
+    setBatchDeleting(false);
+    setBatchDeleteOpen(false);
+    setSelectedPatterns(new Set());
+    showToast(`Deleted ${deleted} zone(s)`, deleted > 0 ? "success" : "error");
+    await fetchZones();
+  };
+
   const showToast = (message: string, severity: "success" | "error") => {
     setToast({ open: true, message, severity });
   };
@@ -364,6 +431,50 @@ export default function ZonesPage() {
         </Box>
       </Box>
 
+      {/* Search + Batch actions */}
+      <Box sx={{ display: "flex", gap: 2, mb: 2, flexWrap: "wrap", alignItems: "center" }}>
+        <TextField
+          size="small"
+          placeholder="Search zones..."
+          value={searchQuery}
+          onChange={(e) => { setSearchQuery(e.target.value); clearSelection(); }}
+          slotProps={{
+            input: {
+              startAdornment: (
+                <InputAdornment position="start">
+                  <SearchIcon />
+                </InputAdornment>
+              ),
+            },
+          }}
+          sx={{ minWidth: 240, flex: 1 }}
+        />
+        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+          <Checkbox
+            checked={isAllSelected}
+            indeterminate={isIndeterminate}
+            onChange={toggleSelectAll}
+            disabled={filteredZones.length === 0}
+            size="small"
+          />
+          <Typography variant="body2" color="text.secondary" sx={{ whiteSpace: "nowrap" }}>
+            {selectedPatterns.size > 0 ? `${selectedPatterns.size} selected` : "Select all"}
+          </Typography>
+          {selectedPatterns.size > 0 && (
+            <Button
+              variant="outlined"
+              color="error"
+              size="small"
+              startIcon={<DeleteIcon />}
+              onClick={() => setBatchDeleteOpen(true)}
+              sx={{ textTransform: "none", borderRadius: 2 }}
+            >
+              Delete Selected ({selectedPatterns.size})
+            </Button>
+          )}
+        </Box>
+      </Box>
+
       {error && (
         <Alert severity="error" sx={{ mb: 3, borderRadius: 2 }} onClose={() => setError("")}>
           {error}
@@ -385,13 +496,21 @@ export default function ZonesPage() {
             </Button>
           </CardContent>
         </Card>
+      ) : filteredZones.length === 0 ? (
+        <Card elevation={0} sx={{ border: 1, borderColor: "divider", borderRadius: 2, textAlign: "center", py: 8 }}>
+          <CardContent>
+            <Typography variant="h6" color="text.secondary">
+              No zones match your search
+            </Typography>
+          </CardContent>
+        </Card>
       ) : (
         <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
-          {zones.map((zone, idx) => (
+          {filteredZones.map((zone, idx) => (
             <Card
               key={zone.pattern}
               elevation={0}
-              sx={{ border: 1, borderColor: "divider", borderRadius: 2 }}
+              sx={{ border: 1, borderColor: selectedPatterns.has(zone.pattern) ? "primary.main" : "divider", borderRadius: 2 }}
             >
               <CardContent sx={{ py: 2, px: 3, "&:last-child": { pb: 2 } }}>
                 {/* Header */}
@@ -404,7 +523,14 @@ export default function ZonesPage() {
                     gap: 1,
                   }}
                 >
-                  <Box sx={{ flex: 1, minWidth: 0 }}>
+                  <Box sx={{ display: "flex", alignItems: "flex-start", gap: 0.5, flex: 1, minWidth: 0 }}>
+                    <Checkbox
+                      checked={selectedPatterns.has(zone.pattern)}
+                      onChange={() => toggleSelect(zone.pattern)}
+                      size="small"
+                      sx={{ mt: -0.5 }}
+                    />
+                    <Box sx={{ flex: 1, minWidth: 0 }}>
                     <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
                       <Typography
                         sx={{
@@ -436,19 +562,20 @@ export default function ZonesPage() {
                       />
                     </Box>
                   </Box>
-                  <Box sx={{ display: "flex", gap: 0.5 }}>
-                    <Tooltip title="Edit zone">
-                      <IconButton size="small" onClick={() => openEditEditor(zone, idx)} color="primary">
-                        <EditIcon sx={{ fontSize: 18 }} />
-                      </IconButton>
-                    </Tooltip>
-                    <Tooltip title="Delete zone">
-                      <IconButton size="small" onClick={() => confirmDeleteZone(zone)} color="error">
-                        <DeleteIcon sx={{ fontSize: 18 }} />
-                      </IconButton>
-                    </Tooltip>
-                  </Box>
                 </Box>
+                <Box sx={{ display: "flex", gap: 0.5 }}>
+                  <Tooltip title="Edit zone">
+                    <IconButton size="small" onClick={() => openEditEditor(zone, idx)} color="primary">
+                      <EditIcon sx={{ fontSize: 18 }} />
+                    </IconButton>
+                  </Tooltip>
+                  <Tooltip title="Delete zone">
+                    <IconButton size="small" onClick={() => confirmDeleteZone(zone)} color="error">
+                      <DeleteIcon sx={{ fontSize: 18 }} />
+                    </IconButton>
+                  </Tooltip>
+                </Box>
+              </Box>
 
                 {/* Countries accordion */}
                 <Box sx={{ mt: 1.5 }}>
@@ -737,6 +864,38 @@ export default function ZonesPage() {
             sx={{ textTransform: "none", borderRadius: 2 }}
           >
             {deleting ? "Deleting..." : "Delete"}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* --- Batch delete confirmation --- */}
+      <Dialog
+        open={batchDeleteOpen}
+        onClose={() => setBatchDeleteOpen(false)}
+        maxWidth="xs"
+        fullWidth
+      >
+        <DialogTitle sx={{ fontWeight: 700 }}>Delete Selected Zones</DialogTitle>
+        <DialogContent>
+          <Typography>
+            Are you sure you want to delete {selectedPatterns.size} selected zone(s)?
+          </Typography>
+          <Typography variant="body2" color="error.main" sx={{ mt: 1, fontWeight: 600 }}>
+            This will delete ALL countries and records for each zone. This action cannot be undone.
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 3 }}>
+          <Button onClick={() => setBatchDeleteOpen(false)} sx={{ textTransform: "none", borderRadius: 2 }}>
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            color="error"
+            onClick={handleBatchDelete}
+            disabled={batchDeleting}
+            sx={{ textTransform: "none", borderRadius: 2 }}
+          >
+            {batchDeleting ? "Deleting..." : `Delete ${selectedPatterns.size} zone(s)`}
           </Button>
         </DialogActions>
       </Dialog>
