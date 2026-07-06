@@ -36,43 +36,26 @@ jobs:
         run: |
           mkdir -p ~/.ssh
           chmod 700 ~/.ssh
-
-          # Validate secrets
-          if [ -z "$SSH_PRIVATE_KEY" ]; then
-            echo "::error::SSH_PRIVATE_KEY secret is empty"
-            exit 1
-          fi
-          if [ -z "$SSH_HOST" ]; then
-            echo "::error::SSH_HOST secret is empty"
-            exit 1
-          fi
-
+          
           eval $(ssh-agent -s)
           echo "SSH_AUTH_SOCK=$SSH_AUTH_SOCK" >> $GITHUB_ENV
           echo "SSH_AGENT_PID=$SSH_AGENT_PID" >> $GITHUB_ENV
-
+          
           echo 'echo "$SSH_PASSPHRASE"' > ~/.ssh/askpass.sh
           chmod +x ~/.ssh/askpass.sh
-
-          # Remove >/dev/null to surface ssh-add errors
-          echo "$SSH_PRIVATE_KEY" | DISPLAY=None SSH_ASKPASS=~/.ssh/askpass.sh ssh-add -
-
+          
+          echo "$SSH_PRIVATE_KEY" | DISPLAY=None SSH_ASKPASS=~/.ssh/askpass.sh ssh-add - >/dev/null
+          
           rm -f ~/.ssh/askpass.sh
-
-          # Add host key — retry with longer timeout if first attempt fails
-          ssh-keyscan -H -T 15 "$SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null || \
-            ssh-keyscan -H -T 30 "$SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null || \
-            echo "::warning::ssh-keyscan failed for $SSH_HOST"
-
-          # Shared SSH opts: accept-new in case keyscan failed, timeouts to prevent hangs
-          SSH_OPTS="-o StrictHostKeyChecking=accept-new -o ConnectTimeout=15 -o ServerAliveInterval=30"
-          echo "SSH_OPTS=$SSH_OPTS" >> $GITHUB_ENV
+          
+          # skip the ask
+          ssh-keyscan -4 -H $SSH_HOST >> ~/.ssh/known_hosts
 
       - name: Sync Remote Repo & Install Deps
         env:
           WORK_PATH: ${{ secrets.WORK_PATH }}
         run: |
-          ssh $SSH_OPTS ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "bash -s" << 'ENDSSH'
+          ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "bash -s" << 'ENDSSH'
             set -e
             cd ${{ secrets.WORK_PATH }}
             export PATH="$HOME/.bun/bin:$PATH"
@@ -89,11 +72,11 @@ jobs:
       - name: Upload archive via rsync
         run: |
           echo "Uploading archive..."
-          rsync -aP --no-i-r -e "ssh $SSH_OPTS" /tmp/blog-build.tar.gz ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/tmp/blog-build.tar.gz
+          rsync -aP --no-i-r -e "ssh" /tmp/blog-build.tar.gz ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/tmp/blog-build.tar.gz
 
       - name: Extract Archive & Restart Service
         run: |
-          ssh $SSH_OPTS ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "bash -s" << 'ENDSSH'
+          ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "bash -s" << 'ENDSSH'
             set -e
             cd ${{ secrets.WORK_PATH }}
             
