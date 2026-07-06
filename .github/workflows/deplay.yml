@@ -28,85 +28,52 @@ jobs:
           tar -czf /tmp/blog-build.tar.gz build
           echo "Archive Size: $(du -h /tmp/blog-build.tar.gz | cut -f1)"
 
-      - name: Setup SSH with Verbose Debugging
-        run: |
-          mkdir -p ~/.ssh
-          chmod 700 ~/.ssh
-          
-          # Initialize SSH Agent
-          eval $(ssh-agent -s)
-          echo "SSH_AUTH_SOCK=$SSH_AUTH_SOCK" >> $GITHUB_ENV
-          echo "SSH_AGENT_PID=$SSH_AGENT_PID" >> $GITHUB_ENV
-          
-          # Load Private Key safely
-          echo 'echo "$SSH_KEY_PASSPHRASE"' > ~/.ssh/askpass.sh
-          chmod +x ~/.ssh/askpass.sh
-          echo "$SSH_PRIVATE_KEY" | DISPLAY=None SSH_ASKPASS=~/.ssh/askpass.sh ssh-add - >/dev/null
-          rm -f ~/.ssh/askpass.sh
-          
-          # Validate Env Variable smoothly
-          if [ -z "$SSH_HOST" ]; then
-            echo "ERROR: SSH_HOST secret is empty or missing!"
-            exit 1
-          fi
-          
-          echo "=== DEBUG: Executing verbose connection test ==="
-          # -v flags will print exact handshake/network details directly to the console
-          # without suppressing errors or redirecting output.
-          ssh-keyscan -v -4 -H "$SSH_HOST" || true
-          echo "=== DEBUG: End of connection test ==="
-          
-          # Actual scan for the known_hosts file
-          ssh-keyscan -4 -H "$SSH_HOST" >> ~/.ssh/known_hosts
-        env:
-          SSH_KEY_PASSPHRASE: ${{ secrets.SSH_KEY_PASSPHRASE }}
-          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
-          SSH_HOST: ${{ secrets.SSH_HOST }}
 
-      - name: Sync Remote Repo & Install Deps
+      - name: 📦 Upload Archive via SCP
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          passphrase: ${{ secrets.SSH_KEY_PASSPHRASE }}
+          source: "/tmp/blog-build.tar.gz"
+          target: "/tmp"
+          strip_components:
+
+      - name: ⚙️ Sync, Extract & Restart Service
+        uses: appleboy/ssh-action@v1.0.3
         env:
           WORK_PATH: ${{ secrets.WORK_PATH }}
-        run: |
-          ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "bash -s" << 'ENDSSH'
+          DNS_MANAGER_TOKEN: ${{ secrets.DNS_MANAGER_TOKEN }}
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          passphrase: ${{ secrets.SSH_KEY_PASSPHRASE }}
+          envs: WORK_PATH,DNS_MANAGER_TOKEN 
+          script: |
             set -e
-            cd ${{ secrets.WORK_PATH }}
+            cd $WORK_PATH
             export PATH="$HOME/.bun/bin:$PATH"
-            echo "git fetch origin run"
+            
+            echo "  → [1/5] Fetching & Resetting Repository..."
             git fetch origin run
-            echo "git checkout + reset"
             git checkout run
             git reset --hard origin/run
-            echo "bun install"
+            
+            echo "  → [2/5] Installing Dependencies..."
             bun --bun --smol install
-            echo "deps ready"
-          ENDSSH
-
-      - name: Upload archive via rsync
-        run: |
-          echo "Uploading archive..."
-          rsync -aP --no-i-r -e "ssh" /tmp/blog-build.tar.gz ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/tmp/blog-build.tar.gz
-
-      - name: Extract Archive & Restart Service
-        run: |
-          ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "bash -s" << 'ENDSSH'
-            set -e
-            cd ${{ secrets.WORK_PATH }}
             
-            echo "  → removing old build..."
+            echo "  → [3/5] Extracting New Build..."
             rm -rf build
-            
-            echo "  → extracting archive..."
             tar -xzf /tmp/blog-build.tar.gz
             rm -f /tmp/blog-build.tar.gz
-            echo "  ✓ extracted"
-
-            echo "DNS_MANAGER_TOKEN=${{ secrets.DNS_MANAGER_TOKEN }}" >> .env
             
+            echo "  → [4/5] Updating Environment Variables..."
+            echo "DNS_MANAGER_TOKEN=$DNS_MANAGER_TOKEN" >> .env
+            
+            echo "  → [5/5] Restarting Systemd Service..."
             sudo systemctl restart dra-tool.service
-
             sleep 1
-            echo "  ✓ service started"
-          ENDSSH
-
-      - name: Deploy Complete
-        run: echo "🚀 Deploy complete!"
+            
+            echo "🚀 Deploy Complete & Service Started!"
