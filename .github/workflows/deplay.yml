@@ -36,20 +36,33 @@ jobs:
         run: |
           mkdir -p ~/.ssh
           chmod 700 ~/.ssh
-          
+
+          # Validate secrets
+          if [ -z "$SSH_PRIVATE_KEY" ]; then
+            echo "::error::SSH_PRIVATE_KEY secret is empty"
+            exit 1
+          fi
+          if [ -z "$SSH_HOST" ]; then
+            echo "::error::SSH_HOST secret is empty"
+            exit 1
+          fi
+
           eval $(ssh-agent -s)
           echo "SSH_AUTH_SOCK=$SSH_AUTH_SOCK" >> $GITHUB_ENV
           echo "SSH_AGENT_PID=$SSH_AGENT_PID" >> $GITHUB_ENV
-          
+
           echo 'echo "$SSH_PASSPHRASE"' > ~/.ssh/askpass.sh
           chmod +x ~/.ssh/askpass.sh
-          
-          echo "$SSH_PRIVATE_KEY" | DISPLAY=None SSH_ASKPASS=~/.ssh/askpass.sh ssh-add - >/dev/null
-          
+
+          # Remove >/dev/null to surface ssh-add errors
+          echo "$SSH_PRIVATE_KEY" | DISPLAY=None SSH_ASKPASS=~/.ssh/askpass.sh ssh-add -
+
           rm -f ~/.ssh/askpass.sh
-          
-          # remove the ask
-          ssh-keyscan -H $SSH_HOST >> ~/.ssh/known_hosts
+
+          # Add host key (fail gracefully if host not reachable)
+          ssh-keyscan -H "$SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null || {
+            echo "::warning::ssh-keyscan failed for $SSH_HOST, adding with StrictHostKeyChecking=accept-new"
+          }
 
       - name: Sync Remote Repo & Install Deps
         env:
