@@ -10,6 +10,7 @@ import LockIcon from "@mui/icons-material/Lock";
 import DnsIcon from "@mui/icons-material/Dns";
 import LanguageIcon from "@mui/icons-material/Language";
 import ShieldIcon from "@mui/icons-material/Shield";
+import QrCode2Icon from "@mui/icons-material/QrCode2";
 
 interface ToolItem {
   key: string;
@@ -44,6 +45,13 @@ export default function ToolsClient() {
       description: t.tools.ip.description,
       href: "/tools/ip",
       icon: <LanguageIcon sx={{ fontSize: 32 }} />,
+    },
+    {
+      key: "qrcode",
+      title: t.tools.qrcode.title,
+      description: t.tools.qrcode.description,
+      href: "/tools/qrcode",
+      icon: <QrCode2Icon sx={{ fontSize: 32 }} />,
     },
     {
       key: "dnsLeak",
