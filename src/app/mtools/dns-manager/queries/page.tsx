@@ -39,11 +39,13 @@ import { alpha } from "@mui/material";
 import Link from "next/link";
 import { hasToken, listQueries, deleteQueries, deleteQueryById } from "@/lib/dns-manager/api";
 import type { QueryItem } from "@/lib/dns-manager/types";
+import { useDocumentTitle } from "@/hooks/useDocumentTitle";
 
 const PAGE_SIZE = 20;
 
 export default function QueriesPage() {
   const theme = useTheme();
+  useDocumentTitle("DNS Analytics");
 
   // Search
   const [domain, setDomain] = useState("");

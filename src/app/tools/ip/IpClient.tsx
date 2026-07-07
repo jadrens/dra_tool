@@ -19,6 +19,7 @@ import LanguageIcon from "@mui/icons-material/Language";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import { useI18n } from "@/lib/i18n";
+import { useDocumentTitle } from "@/hooks/useDocumentTitle";
 import { alpha } from "@mui/material";
 
 const API_BASE = "https://tool.rayou.me";
@@ -26,6 +27,7 @@ const API_BASE = "https://tool.rayou.me";
 export default function IpClient() {
   const { t } = useI18n();
   const theme = useTheme();
+  useDocumentTitle(t.tools.ip.title);
   const [ip, setIp] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

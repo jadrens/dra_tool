@@ -40,6 +40,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { hasToken, listEdns, deleteEdns } from "@/lib/dns-manager/api";
 import type { EdnsItem } from "@/lib/dns-manager/types";
+import { useDocumentTitle } from "@/hooks/useDocumentTitle";
 
 const PAGE_SIZE = 20;
 
@@ -52,6 +53,7 @@ const QUICK_TIMES = [
 
 function EdnsPageContent() {
   const theme = useTheme();
+  useDocumentTitle("EDNS Records");
   const searchParams = useSearchParams();
 
   // Search filters

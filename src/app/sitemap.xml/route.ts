@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-const BASE_URL = "https://tool.rayou.me";
+const BASE_URL = "https://tool.jadren.me";
 
 function formatDate(date: Date): string {
   return date.toISOString().split("T")[0];

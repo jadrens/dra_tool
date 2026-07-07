@@ -28,6 +28,7 @@ import { alpha } from "@mui/material";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import { useI18n } from "@/lib/i18n";
+import { useDocumentTitle } from "@/hooks/useDocumentTitle";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -168,6 +169,7 @@ type Phase = "idle" | "probing" | "streaming";
 export default function DnsLeakClient() {
   const { t } = useI18n();
   const theme = useTheme();
+  useDocumentTitle(t.tools.dnsLeak.title);
 
   const [phase, setPhase] = useState<Phase>("idle");
   const [rows, setRows] = useState<RowState[]>([]);

@@ -16,6 +16,7 @@ import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import { useI18n } from "@/lib/i18n";
+import { useDocumentTitle } from "@/hooks/useDocumentTitle";
 import { alpha } from "@mui/material";
 
 type Mode = "encode" | "decode";
@@ -23,6 +24,7 @@ type Mode = "encode" | "decode";
 export default function Base64Client() {
   const { t } = useI18n();
   const theme = useTheme();
+  useDocumentTitle(t.tools.base64.title);
 
   const [mode, setMode] = useState<Mode>("encode");
   const [input, setInput] = useState("");

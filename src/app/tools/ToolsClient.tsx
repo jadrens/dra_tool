@@ -5,6 +5,7 @@ import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import Link from "next/link";
 import { useI18n } from "@/lib/i18n";
+import { useDocumentTitle } from "@/hooks/useDocumentTitle";
 import { alpha, useTheme } from "@mui/material";
 import LockIcon from "@mui/icons-material/Lock";
 import DnsIcon from "@mui/icons-material/Dns";
@@ -23,6 +24,7 @@ interface ToolItem {
 export default function ToolsClient() {
   const { t } = useI18n();
   const theme = useTheme();
+  useDocumentTitle(t.tools.title);
 
   const tools: ToolItem[] = [
     {

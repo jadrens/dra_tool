@@ -6,6 +6,7 @@ import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import Link from "next/link";
 import { useI18n } from "@/lib/i18n";
+import { useDocumentTitle } from "@/hooks/useDocumentTitle";
 import { alpha, useTheme } from "@mui/material";
 import DnsIcon from "@mui/icons-material/Dns";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
@@ -41,6 +42,7 @@ function formatTime(date: Date): string {
 export default function MtoolsClient() {
   const { t } = useI18n();
   const theme = useTheme();
+  useDocumentTitle(t.mtools.title);
 
   const [health, setHealth] = useState<boolean | null>(null);
   const [lastCheck, setLastCheck] = useState<Date | null>(null);

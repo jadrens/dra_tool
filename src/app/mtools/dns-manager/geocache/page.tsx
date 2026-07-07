@@ -36,11 +36,13 @@ import Link from "next/link";
 import LinkIcon from "@mui/icons-material/Link";
 import { hasToken, getGeoCache, deleteGeoCache } from "@/lib/dns-manager/api";
 import type { GeoCacheEntry } from "@/lib/dns-manager/types";
+import { useDocumentTitle } from "@/hooks/useDocumentTitle";
 
 const PAGE_SIZE = 20;
 
 export default function GeocachePage() {
   const theme = useTheme();
+  useDocumentTitle("Geo Cache");
 
   // Search filters
   const [subnet, setSubnet] = useState("");

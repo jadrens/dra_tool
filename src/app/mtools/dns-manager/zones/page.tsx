@@ -49,6 +49,7 @@ import {
 } from "@/lib/dns-manager/api";
 import { validateRecordValue } from "@/lib/dns-manager/validation";
 import type { Zone, DnsRecordSet, ZoneCountries } from "@/lib/dns-manager/types";
+import { useDocumentTitle } from "@/hooks/useDocumentTitle";
 
 const RECORD_TYPES = ["a", "aaaa", "txt", "cname"] as const;
 const RECORD_LABELS: Record<string, string> = {
@@ -75,6 +76,7 @@ function emptyZone(): Zone {
 
 export default function ZonesPage() {
   const theme = useTheme();
+  useDocumentTitle("Zone Management");
   const [zones, setZones] = useState<Zone[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");

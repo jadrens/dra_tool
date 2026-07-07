@@ -22,6 +22,7 @@ import SearchIcon from "@mui/icons-material/Search";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import { useI18n } from "@/lib/i18n";
+import { useDocumentTitle } from "@/hooks/useDocumentTitle";
 import { alpha } from "@mui/material";
 
 
@@ -114,6 +115,7 @@ function buildSection(
 export default function DnsClient() {
   const { t } = useI18n();
   const theme = useTheme();
+  useDocumentTitle(t.tools.dns.title);
 
   const [domain, setDomain] = useState("");
   const [sections, setSections] = useState<QuerySection[]>([]);

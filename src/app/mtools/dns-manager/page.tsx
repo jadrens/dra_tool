@@ -30,9 +30,11 @@ import BarChartIcon from "@mui/icons-material/BarChart";
 import { alpha } from "@mui/material";
 import { hasToken, getStats, listZones, checkHealth, getServerConfig, updateServerConfig } from "@/lib/dns-manager/api";
 import type { StatsResponse, ZoneListResponse, ServerConfig } from "@/lib/dns-manager/types";
+import { useDocumentTitle } from "@/hooks/useDocumentTitle";
 
 export default function DnsManagerDashboard() {
   const theme = useTheme();
+  useDocumentTitle("DNS Manager");
   const [health, setHealth] = useState<boolean | null>(null);
   const [stats, setStats] = useState<StatsResponse | null>(null);
   const [zones, setZones] = useState<ZoneListResponse | null>(null);

@@ -20,11 +20,13 @@ import { alpha } from "@mui/material";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import { useI18n } from "@/lib/i18n";
+import { useDocumentTitle } from "@/hooks/useDocumentTitle";
 import QRCode from "qrcode";
 
 export default function QrcodeClient() {
   const { t } = useI18n();
   const theme = useTheme();
+  useDocumentTitle(t.tools.qrcode.title);
 
   const [text, setText] = useState("https://tool.rayou.me");
   const [imageUrl, setImageUrl] = useState("");
