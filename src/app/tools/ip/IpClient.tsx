@@ -7,6 +7,8 @@ import {
   Card,
   CardContent,
   Button,
+  Chip,
+  Tooltip,
   Snackbar,
   Alert,
   CircularProgress,
@@ -24,6 +26,48 @@ import { alpha } from "@mui/material";
 
 const API_BASE = "https://tool.rayou.me";
 
+// ---------------------------------------------------------------------------
+// Types
+// ---------------------------------------------------------------------------
+
+interface IpGeolocation {
+  query: string;
+  status: string;
+  country: string;
+  countryCode: string;
+  region: string;
+  regionName: string;
+  city: string;
+  district: string;
+  zip: string;
+  lat: number;
+  lon: number;
+  timezone: string;
+  offset: number;
+  isp: string;
+  org: string;
+  as: string;
+  asname: string;
+  reverse: string;
+  mobile: boolean;
+  proxy: boolean;
+  hosting: boolean;
+}
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+function countryFlag(code: string): string {
+  if (!code || code === "unknown") return "🏳️";
+  const upper = code.toUpperCase();
+  const a = 0x1f1e6;
+  const c0 = upper.charCodeAt(0);
+  const c1 = upper.charCodeAt(1);
+  if (c0 < 65 || c0 > 90 || c1 < 65 || c1 > 90) return "🏳️";
+  return String.fromCodePoint(a + c0 - 65, a + c1 - 65);
+}
+
 export default function IpClient() {
   const { t } = useI18n();
   const theme = useTheme();
@@ -33,15 +77,26 @@ export default function IpClient() {
   const [error, setError] = useState<string | null>(null);
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState("");
+  const [geoData, setGeoData] = useState<IpGeolocation | null>(null);
+  const [geoLoading, setGeoLoading] = useState(false);
 
   const fetchIp = useCallback(async () => {
     setLoading(true);
     setError(null);
+    setGeoData(null);
     try {
       const res = await fetch("/api/ip");
       if (!res.ok) throw new Error("Failed to fetch IP");
       const data = await res.json();
       setIp(data.ip);
+
+      // Async fetch geo info
+      setGeoLoading(true);
+      fetch(`/api/ip-geo?ip=${encodeURIComponent(data.ip)}`, { signal: AbortSignal.timeout(10000) })
+        .then((r) => (r.ok ? r.json() : null))
+        .then((geo) => setGeoData(geo))
+        .catch(() => setGeoData(null))
+        .finally(() => setGeoLoading(false));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unknown error");
     } finally {
@@ -145,37 +200,94 @@ export default function IpClient() {
                   {error}
                 </Typography>
               ) : (
-                <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 2, flexWrap: "wrap" }}>
-                  <Typography
-                    variant="h3"
-                    sx={{
-                      fontWeight: 800,
-                      fontFamily: "'JetBrains Mono', 'Fira Code', monospace",
-                      color: "primary.main",
-                      wordBreak: "break-all",
-                    }}
-                  >
-                    {ip}
-                  </Typography>
-                  <Box sx={{ display: "flex", gap: 1 }}>
-                    <Button
-                      variant="outlined"
-                      size="small"
-                      startIcon={<ContentCopyIcon />}
-                      onClick={() => copyToClipboard(ip!, t.tools.ip.copied)}
+                <>
+                  <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 2, flexWrap: "wrap" }}>
+                    <Typography
+                      variant="h3"
+                      sx={{
+                        fontWeight: 800,
+                        fontFamily: "'JetBrains Mono', 'Fira Code', monospace",
+                        color: "primary.main",
+                        wordBreak: "break-all",
+                      }}
                     >
-                      {t.tools.ip.copy}
-                    </Button>
-                    <Button
-                      variant="outlined"
-                      size="small"
-                      startIcon={<RefreshIcon />}
-                      onClick={fetchIp}
-                    >
-                      {t.tools.ip.refresh}
-                    </Button>
+                      {ip}
+                    </Typography>
+                    <Box sx={{ display: "flex", gap: 1 }}>
+                      <Button
+                        variant="outlined"
+                        size="small"
+                        startIcon={<ContentCopyIcon />}
+                        onClick={() => copyToClipboard(ip!, t.tools.ip.copied)}
+                      >
+                        {t.tools.ip.copy}
+                      </Button>
+                      <Button
+                        variant="outlined"
+                        size="small"
+                        startIcon={<RefreshIcon />}
+                        onClick={fetchIp}
+                      >
+                        {t.tools.ip.refresh}
+                      </Button>
+                    </Box>
                   </Box>
-                </Box>
+
+                  {/* Geo info */}
+                  {(geoLoading || geoData) && (
+                    <Box
+                      sx={{
+                        mt: 3,
+                        pt: 3,
+                        borderTop: `1px solid ${theme.palette.divider}`,
+                        display: "flex",
+                        justifyContent: "center",
+                        flexWrap: "wrap",
+                        gap: 1,
+                      }}
+                    >
+                      {geoLoading && !geoData ? (
+                        <CircularProgress size={18} />
+                      ) : geoData ? (
+                        <>
+                          <Tooltip title={`${countryFlag(geoData.countryCode)} ${geoData.country} (${geoData.countryCode})`}>
+                            <Chip
+                              icon={<Typography sx={{ fontSize: 14 }}>{countryFlag(geoData.countryCode)}</Typography>}
+                              label={`${geoData.city || geoData.country}${geoData.regionName ? `, ${geoData.regionName}` : ""}`}
+                              size="small"
+                              variant="outlined"
+                              sx={{ borderRadius: 2 }}
+                            />
+                          </Tooltip>
+                          <Tooltip title={geoData.isp || "—"}>
+                            <Chip
+                              label={`📍 ${geoData.isp || "—"}`}
+                              size="small"
+                              variant="outlined"
+                              sx={{ borderRadius: 2 }}
+                            />
+                          </Tooltip>
+                          <Tooltip title={geoData.org || "—"}>
+                            <Chip
+                              label={`🏢 ${geoData.org || "—"}`}
+                              size="small"
+                              variant="outlined"
+                              sx={{ borderRadius: 2 }}
+                            />
+                          </Tooltip>
+                          <Tooltip title={`${geoData.as} — ${geoData.asname || ""}`}>
+                            <Chip
+                              label={`🔗 ${geoData.as}`}
+                              size="small"
+                              variant="outlined"
+                              sx={{ borderRadius: 2 }}
+                            />
+                          </Tooltip>
+                        </>
+                      ) : null}
+                    </Box>
+                  )}
+                </>
               )}
             </CardContent>
           </Card>

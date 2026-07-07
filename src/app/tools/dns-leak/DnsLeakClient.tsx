@@ -7,6 +7,7 @@ import {
   Button,
   Card,
   CardContent,
+  Drawer,
   Table,
   TableBody,
   TableCell,
@@ -16,6 +17,7 @@ import {
   CircularProgress,
   LinearProgress,
   Tooltip,
+  IconButton,
   useTheme,
   Divider,
   Alert,
@@ -24,11 +26,11 @@ import PlayArrowIcon from "@mui/icons-material/PlayArrow";
 import RefreshIcon from "@mui/icons-material/Refresh";
 import VerifiedIcon from "@mui/icons-material/Verified";
 import WarningAmberIcon from "@mui/icons-material/WarningAmber";
+import CloseIcon from "@mui/icons-material/Close";
 import { alpha } from "@mui/material";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import { useI18n } from "@/lib/i18n";
-import { useDocumentTitle } from "@/hooks/useDocumentTitle";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -169,13 +171,14 @@ type Phase = "idle" | "probing" | "streaming";
 export default function DnsLeakClient() {
   const { t } = useI18n();
   const theme = useTheme();
-  useDocumentTitle(t.tools.dnsLeak.title);
 
   const [phase, setPhase] = useState<Phase>("idle");
   const [rows, setRows] = useState<RowState[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [probeProgress, setProbeProgress] = useState(0);
+  const [geoDrawerDomain, setGeoDrawerDomain] = useState<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
+  const geoCacheRef = useRef<Record<string, Promise<IpGeolocation | null>>>({});
 
   // ── pick IP for geo: EDNS subnet IP first, then DNS client IP ──
   const pickIp = useCallback((q: QueryResult): string | null => {
@@ -185,6 +188,7 @@ export default function DnsLeakClient() {
   }, []);
 
   // ── fetch geo for one IP, update the row ──
+  // Uses geoCacheRef to deduplicate concurrent requests for the same IP
   const fetchGeo = useCallback(
     async (domain: string, ip: string) => {
       setRows((prev) =>
@@ -193,20 +197,28 @@ export default function DnsLeakClient() {
         ),
       );
 
-      let data: IpGeolocation | null = null;
-      try {
-        // Use our own API proxy to avoid mixed-content errors
-        // (ip-api.com only supports HTTP, so the browser can't call it directly on an HTTPS page)
-        const res = await fetch(
-          `/api/ip-geo?ip=${encodeURIComponent(ip)}`,
-          { signal: AbortSignal.timeout(10000) },
-        );
-        if (res.ok) {
-          data = await res.json();
-        }
-      } catch {
-        // ignore, geo is best-effort
+      // If this IP has no in-flight request yet, create one and cache the Promise
+      if (!geoCacheRef.current[ip]) {
+        geoCacheRef.current[ip] = (async (): Promise<IpGeolocation | null> => {
+          try {
+            // Use our own API proxy to avoid mixed-content errors
+            // (ip-api.com only supports HTTP, so the browser can't call it directly on an HTTPS page)
+            const res = await fetch(
+              `/api/ip-geo?ip=${encodeURIComponent(ip)}`,
+              { signal: AbortSignal.timeout(10000) },
+            );
+            if (res.ok) {
+              return await res.json();
+            }
+          } catch {
+            // ignore, geo is best-effort
+          }
+          return null;
+        })();
       }
+
+      // All domains sharing the same IP await the same Promise
+      const data = await geoCacheRef.current[ip];
 
       setRows((prev) =>
         prev.map((r) =>
@@ -263,6 +275,7 @@ export default function DnsLeakClient() {
   // ── start test ──
   const startTest = useCallback(async () => {
     abortRef.current?.abort();
+    geoCacheRef.current = {}; // 清空 IP 地理信息缓存，避免干扰下一次测试
     setError(null);
     setProbeProgress(0);
     setPhase("probing");
@@ -301,15 +314,14 @@ export default function DnsLeakClient() {
     await Promise.all(probes);
 
     // ── step 2: wait 1s then fire 10 individual API calls ──
-    await new Promise((resolve) => setTimeout(resolve, 500));
+    await new Promise((resolve) => setTimeout(resolve, 1000));
     setPhase("streaming");
     newDomains.forEach((domain) => fetchDomainResult(domain));
   }, [fetchDomainResult]);
 
   // ── derived ──
-  const hasEdns = rows.some(
-    (r) => r.queries[0]?.edns_subnet || r.queries[0]?.edns_country_code,
-  );
+  // Always show EDNS columns — display "—" when values are null
+  const hasEdns = true;
 
   const allCountries = rows
     .flatMap((r) => r.queries.map((q) => q.country_code))
@@ -323,7 +335,7 @@ export default function DnsLeakClient() {
   const hasLeak = allCountries.length > 1;
   const allDone = rows.length > 0 && rows.every((r) => !r.loading);
 
-  // ── inline geo chip renderer ──
+  // ── inline geo chip renderer (click to open drawer) ──
   const renderGeoCell = (row: RowState) => {
     if (row.geoLoading) {
       return (
@@ -344,36 +356,26 @@ export default function DnsLeakClient() {
     }
     const g = row.geoData;
     return (
-      <Tooltip
-        title={
-          <Box sx={{ lineHeight: 1.6 }}>
-            <div>Country: {countryFlag(g.countryCode)} {g.country} ({g.countryCode})</div>
-            <div>Region: {g.regionName} ({g.region})</div>
-            <div>City: {g.city}{g.district ? ` / ${g.district}` : ""}</div>
-            <div>ZIP: {g.zip || "—"}</div>
-            <div>ISP: {g.isp || "—"}</div>
-            <div>Org: {g.org || "—"}</div>
-            <div>AS: {g.as} ({g.asname || "—"})</div>
-            <div>Reverse: {g.reverse || "—"}</div>
-            <div>Proxy: {g.proxy ? "Yes" : "No"} | Mobile: {g.mobile ? "Yes" : "No"} | Hosting: {g.hosting ? "Yes" : "No"}</div>
-          </Box>
-        }
-        arrow
-      >
-        <Chip
-          icon={<Typography sx={{ fontSize: 14 }}>{countryFlag(g.countryCode)}</Typography>}
-          label={`${g.city || g.country} · ${g.isp || g.org || "—"}`}
-          size="small"
-          variant="outlined"
-          sx={{
-            borderRadius: 2,
-            maxWidth: 220,
-            "& .MuiChip-label": { overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" },
-          }}
-        />
-      </Tooltip>
+      <Chip
+        icon={<Typography sx={{ fontSize: 14 }}>{countryFlag(g.countryCode)}</Typography>}
+        label={`${g.city || g.country} · ${g.isp || g.org || "—"}`}
+        size="small"
+        variant="outlined"
+        onClick={() => setGeoDrawerDomain(row.domain)}
+        sx={{
+          borderRadius: 2,
+          maxWidth: 220,
+          cursor: "pointer",
+          "& .MuiChip-label": { overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" },
+        }}
+      />
     );
   };
+
+  // ── geo detail drawer ──
+  const geoDrawerRow = rows.find((r) => r.domain === geoDrawerDomain);
+  const geoDrawerData = geoDrawerRow?.geoData;
+  const geoDrawerOpen = geoDrawerDomain !== null && !!geoDrawerData;
 
   // ── Render ──
   return (
@@ -734,6 +736,90 @@ export default function DnsLeakClient() {
         </Card>
       </Box>
       <Footer />
+
+      {/* IP Geo Detail Drawer */}
+      <Drawer
+        anchor="bottom"
+        open={geoDrawerOpen}
+        onClose={() => setGeoDrawerDomain(null)}
+        slotProps={{
+          backdrop: { sx: { bgcolor: "rgba(0,0,0,0.3)" } },
+          paper: {
+            sx: {
+              borderTopLeftRadius: 16,
+              borderTopRightRadius: 16,
+              maxWidth: 500,
+              mx: "auto",
+              px: 3,
+              pb: 3,
+              pt: 1,
+            },
+          },
+        }}
+      >
+        <Box sx={{ display: "flex", justifyContent: "center", mb: 1 }}>
+          <Box
+            sx={{
+              width: 36,
+              height: 4,
+              borderRadius: 2,
+              bgcolor: "divider",
+            }}
+          />
+        </Box>
+        <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mb: 2 }}>
+          <Typography variant="h6" sx={{ fontWeight: 700 }}>
+            IP Info
+          </Typography>
+          <IconButton size="small" onClick={() => setGeoDrawerDomain(null)}>
+            <CloseIcon fontSize="small" />
+          </IconButton>
+        </Box>
+        {geoDrawerData && (
+          <Box sx={{ lineHeight: 2 }}>
+            <Row label="Country" value={`${countryFlag(geoDrawerData.countryCode)} ${geoDrawerData.country} (${geoDrawerData.countryCode})`} />
+            <Row label="Region" value={`${geoDrawerData.regionName} (${geoDrawerData.region})`} />
+            <Row label="City" value={`${geoDrawerData.city}${geoDrawerData.district ? ` / ${geoDrawerData.district}` : ""}`} />
+            <Row label="ZIP" value={geoDrawerData.zip || "—"} />
+            <Row label="ISP" value={geoDrawerData.isp || "—"} />
+            <Row label="Org" value={geoDrawerData.org || "—"} />
+            <Row label="AS" value={`${geoDrawerData.as} (${geoDrawerData.asname || "—"})`} />
+            <Row label="Reverse" value={geoDrawerData.reverse || "—"} />
+            <Row label="Flags" value={`Proxy: ${geoDrawerData.proxy ? "Yes" : "No"} | Mobile: ${geoDrawerData.mobile ? "Yes" : "No"} | Hosting: ${geoDrawerData.hosting ? "Yes" : "No"}`} />
+          </Box>
+        )}
+        {geoDrawerRow && !geoDrawerData && (
+          <Typography variant="body2" color="text.secondary" sx={{ textAlign: "center", py: 2 }}>
+            No geo data available for this IP.
+          </Typography>
+        )}
+      </Drawer>
     </div>
+  );
+}
+
+// ── small helper for key/value rows in the drawer ──
+function Row({ label, value }: { label: string; value: string }) {
+  const theme = useTheme();
+  return (
+    <Box
+      sx={{
+        display: "flex",
+        justifyContent: "space-between",
+        gap: 2,
+        py: 0.5,
+        borderBottom: `1px solid ${theme.palette.divider}`,
+      }}
+    >
+      <Typography variant="body2" sx={{ fontWeight: 600, whiteSpace: "nowrap", color: "text.secondary" }}>
+        {label}
+      </Typography>
+      <Typography
+        variant="body2"
+        sx={{ textAlign: "right", wordBreak: "break-word", maxWidth: "70%" }}
+      >
+        {value}
+      </Typography>
+    </Box>
   );
 }
