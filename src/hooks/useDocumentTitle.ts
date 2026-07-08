@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { SITE_CONFIG } from "@/var/config";
+import SITE_CONFIG from "@/var/config";
 
 /**
  * Sets the browser tab title (document.title).

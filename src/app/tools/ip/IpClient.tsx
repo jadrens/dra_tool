@@ -7,8 +7,6 @@ import {
   Card,
   CardContent,
   Button,
-  Chip,
-  Tooltip,
   Snackbar,
   Alert,
   CircularProgress,
@@ -59,14 +57,42 @@ interface IpGeolocation {
 // Helpers
 // ---------------------------------------------------------------------------
 
-function countryFlag(code: string): string {
-  if (!code || code === "unknown") return "🏳️";
-  const upper = code.toUpperCase();
-  const a = 0x1f1e6;
-  const c0 = upper.charCodeAt(0);
-  const c1 = upper.charCodeAt(1);
-  if (c0 < 65 || c0 > 90 || c1 < 65 || c1 > 90) return "🏳️";
-  return String.fromCodePoint(a + c0 - 65, a + c1 - 65);
+function GeoRow({
+  label,
+  value,
+}: {
+  label: string;
+  value: React.ReactNode;
+}) {
+  const rowTheme = useTheme();
+  return (
+    <Box
+      sx={{
+        display: "grid",
+        gridTemplateColumns: { xs: "110px 1fr", sm: "160px 1fr" },
+        gap: 1,
+        py: 1,
+        borderBottom: `1px solid ${rowTheme.palette.divider}`,
+        "&:last-of-type": { borderBottom: "none" },
+      }}
+    >
+      <Typography
+        variant="body2"
+        sx={{ color: "text.secondary", fontWeight: 500 }}
+      >
+        {label}
+      </Typography>
+      <Typography
+        variant="body2"
+        sx={{
+          fontFamily: "'JetBrains Mono', 'Fira Code', monospace",
+          wordBreak: "break-all",
+        }}
+      >
+        {value}
+      </Typography>
+    </Box>
+  );
 }
 
 export default function IpClient() {
@@ -241,50 +267,79 @@ export default function IpClient() {
                         mt: 3,
                         pt: 3,
                         borderTop: `1px solid ${theme.palette.divider}`,
-                        display: "flex",
-                        justifyContent: "center",
-                        flexWrap: "wrap",
-                        gap: 1,
+                        textAlign: "left",
                       }}
                     >
                       {geoLoading && !geoData ? (
-                        <CircularProgress size={18} />
+                        <Box sx={{ display: "flex", justifyContent: "center", py: 2 }}>
+                          <CircularProgress size={18} />
+                        </Box>
                       ) : geoData ? (
-                        <>
-                          <Tooltip title={`${countryFlag(geoData.countryCode)} ${geoData.country} (${geoData.countryCode})`}>
-                            <Chip
-                              icon={<Typography sx={{ fontSize: 14 }}>{countryFlag(geoData.countryCode)}</Typography>}
-                              label={`${geoData.city || geoData.country}${geoData.regionName ? `, ${geoData.regionName}` : ""}`}
-                              size="small"
-                              variant="outlined"
-                              sx={{ borderRadius: 2 }}
-                            />
-                          </Tooltip>
-                          <Tooltip title={geoData.isp || "—"}>
-                            <Chip
-                              label={`📍 ${geoData.isp || "—"}`}
-                              size="small"
-                              variant="outlined"
-                              sx={{ borderRadius: 2 }}
-                            />
-                          </Tooltip>
-                          <Tooltip title={geoData.org || "—"}>
-                            <Chip
-                              label={`🏢 ${geoData.org || "—"}`}
-                              size="small"
-                              variant="outlined"
-                              sx={{ borderRadius: 2 }}
-                            />
-                          </Tooltip>
-                          <Tooltip title={`${geoData.as} — ${geoData.asname || ""}`}>
-                            <Chip
-                              label={`🔗 ${geoData.as}`}
-                              size="small"
-                              variant="outlined"
-                              sx={{ borderRadius: 2 }}
-                            />
-                          </Tooltip>
-                        </>
+                        <Box sx={{ display: "flex", flexDirection: "column" }}>
+                          <GeoRow
+                            label={t.tools.ip.location}
+                            value={
+                              [
+                                geoData.country,
+                                geoData.regionName,
+                                geoData.city,
+                                geoData.district,
+                              ]
+                                .filter(Boolean)
+                                .join(", ") || "—"
+                            }
+                          />
+                          <GeoRow
+                            label={t.tools.ip.coordinates}
+                            value={
+                              geoData.lat && geoData.lon
+                                ? `${geoData.lat}, ${geoData.lon}`
+                                : "—"
+                            }
+                          />
+                          <GeoRow
+                            label={t.tools.ip.timezone}
+                            value={
+                              geoData.timezone
+                                ? `${geoData.timezone} (UTC${
+                                    geoData.offset >= 0 ? "+" : ""
+                                  }${geoData.offset / 3600})`
+                                : "—"
+                            }
+                          />
+                          <GeoRow
+                            label={t.tools.ip.isp}
+                            value={geoData.isp || "—"}
+                          />
+                          <GeoRow
+                            label={t.tools.ip.organization}
+                            value={geoData.org || "—"}
+                          />
+                          <GeoRow
+                            label={t.tools.ip.asn}
+                            value={
+                              geoData.as
+                                ? `${geoData.as}${
+                                    geoData.asname ? ` — ${geoData.asname}` : ""
+                                  }`
+                                : "—"
+                            }
+                          />
+                          <GeoRow
+                            label={t.tools.ip.reverseDns}
+                            value={geoData.reverse || "—"}
+                          />
+                          <GeoRow
+                            label={t.tools.ip.network}
+                            value={[
+                              geoData.mobile && t.tools.ip.mobile,
+                              geoData.proxy && t.tools.ip.proxy,
+                              geoData.hosting && t.tools.ip.hosting,
+                            ]
+                              .filter(Boolean)
+                              .join(", ") || t.tools.ip.standard}
+                          />
+                        </Box>
                       ) : null}
                     </Box>
                   )}

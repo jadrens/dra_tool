@@ -4,7 +4,7 @@ import { Box, Typography, Chip, Avatar } from "@mui/material";
 import EmailIcon from "@mui/icons-material/Email";
 import GitHubIcon from "@mui/icons-material/GitHub";
 import BouncingAvatar from "./BouncingAvatar";
-import { SITE_CONFIG } from "@/var/config";
+import SITE_CONFIG from "@/var/config";
 import { CONTACT_CONFIG } from "@/var/contact";
 
 export default function Footer() {

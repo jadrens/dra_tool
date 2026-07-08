@@ -8,7 +8,7 @@ import "@style/misans.css"
 import ThemeRegistry from "@/components/layout/ThemeRegistry/ThemeRegistry";
 import { I18nProvider } from "@/lib/i18n";
 import LoadingBar from "@/components/layout/LoadingBar";
-import { SITE_CONFIG } from "@/var/config";
+import SITE_CONFIG from "@/var/config";
 
 const nunito = Nunito({
   variable: "--font-nunito",
