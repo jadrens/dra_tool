@@ -22,13 +22,14 @@ import Footer from "@/components/layout/Footer";
 import { useI18n } from "@/lib/i18n";
 import { useDocumentTitle } from "@/hooks/useDocumentTitle";
 import QRCode from "qrcode";
+import SITE_CONFIG from "@/var/config";
 
 export default function QrcodeClient() {
   const { t } = useI18n();
   const theme = useTheme();
   useDocumentTitle(t.tools.qrcode.title);
 
-  const [text, setText] = useState("https://tool.rayou.me");
+  const [text, setText] = useState(SITE_CONFIG.baseUrl as string);
   const [imageUrl, setImageUrl] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");

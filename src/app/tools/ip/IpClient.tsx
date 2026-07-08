@@ -23,8 +23,9 @@ import Footer from "@/components/layout/Footer";
 import { useI18n } from "@/lib/i18n";
 import { useDocumentTitle } from "@/hooks/useDocumentTitle";
 import { alpha } from "@mui/material";
+import SITE_CONFIG  from "@/var/config"
 
-const API_BASE = "https://tool.rayou.me";
+const API_BASE = SITE_CONFIG.baseUrl;
 
 // ---------------------------------------------------------------------------
 // Types

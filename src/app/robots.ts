@@ -1,6 +1,7 @@
 import { MetadataRoute } from "next";
+import SITE_CONFIG from "@/var/config";
 
-const BASE_URL = "https://tool.rayou.me";
+const BASE_URL = SITE_CONFIG.baseUrl;
 
 export default function robots(): MetadataRoute.Robots {
   return {

@@ -1,4 +1,4 @@
-export const SITE_CONFIG = {
+const SITE_CONFIG = {
   baseUrl: "https://tool.rayou.me",
   siteName: "jadren tools",
   description: "Useful online tools",
@@ -7,3 +7,5 @@ export const SITE_CONFIG = {
   githubClipEnabled: true,
   githubEditEnabled: false,
 } as const;
+
+export default SITE_CONFIG;
