@@ -6,6 +6,8 @@ import {
   Typography,
   TextField,
   Button,
+  Card,
+  CardContent,
   Table,
   TableBody,
   TableCell,
@@ -31,6 +33,30 @@ interface DnsRecord {
   type: string;
   TTL: number;
   data: string;
+}
+
+interface IpGeolocation {
+  query: string;
+  status: string;
+  country: string;
+  countryCode: string;
+  region: string;
+  regionName: string;
+  city: string;
+  district: string;
+  zip: string;
+  lat: number;
+  lon: number;
+  timezone: string;
+  offset: number;
+  isp: string;
+  org: string;
+  as: string;
+  asname: string;
+  reverse: string;
+  mobile: boolean;
+  proxy: boolean;
+  hosting: boolean;
 }
 
 interface ApiResponse {
@@ -112,6 +138,48 @@ function buildSection(
   };
 }
 
+// ---------------------------------------------------------------------------
+// Geo row helper (reused from IpClient)
+// ---------------------------------------------------------------------------
+
+function GeoRow({
+  label,
+  value,
+}: {
+  label: string;
+  value: React.ReactNode;
+}) {
+  const rowTheme = useTheme();
+  return (
+    <Box
+      sx={{
+        display: "grid",
+        gridTemplateColumns: { xs: "110px 1fr", sm: "160px 1fr" },
+        gap: 1,
+        py: 1,
+        borderBottom: `1px solid ${rowTheme.palette.divider}`,
+        "&:last-of-type": { borderBottom: "none" },
+      }}
+    >
+      <Typography
+        variant="body2"
+        sx={{ color: "text.secondary", fontWeight: 500 }}
+      >
+        {label}
+      </Typography>
+      <Typography
+        variant="body2"
+        sx={{
+          fontFamily: "'JetBrains Mono', 'Fira Code', monospace",
+          wordBreak: "break-all",
+        }}
+      >
+        {value}
+      </Typography>
+    </Box>
+  );
+}
+
 export default function DnsClient() {
   const { t } = useI18n();
   const theme = useTheme();
@@ -122,6 +190,9 @@ export default function DnsClient() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [toast, setToast] = useState({ open: false, message: "" });
+  const [geoData, setGeoData] = useState<IpGeolocation | null>(null);
+  const [geoLoading, setGeoLoading] = useState(false);
+  const [queriedIsIp, setQueriedIsIp] = useState(false);
 
   async function fetchDnsRecords(
     type: SupportedRecordType,
@@ -155,8 +226,11 @@ export default function DnsClient() {
     setLoading(true);
     setError(null);
     setSections([]);
+    setGeoData(null);
+    setGeoLoading(false);
 
     const { host, isIp } = normalizeQueryInput(trimmed);
+    setQueriedIsIp(isIp);
 
     if (!host) {
       setError(t.tools.dns.lookupFailed);
@@ -164,7 +238,7 @@ export default function DnsClient() {
       return;
     }
 
-    const initialTypes = isIp ? ["PTR"] : [...QUERY_TYPES, "PTR"];
+    const initialTypes = isIp ? ["PTR"] : [...QUERY_TYPES];
     const initialSections = initialTypes.map((type) =>
       buildSection(type as SupportedRecordType, [])
     );
@@ -294,6 +368,18 @@ export default function DnsClient() {
       );
       if (!hasRecords && !isIp) {
         setError(t.tools.dns.noRecords);
+      }
+
+      // When input is an IP, fetch geolocation info (best-effort)
+      if (isIp) {
+        setGeoLoading(true);
+        fetch(`/api/ip-geo?ip=${encodeURIComponent(host)}`, {
+          signal: AbortSignal.timeout(10000),
+        })
+          .then((r) => (r.ok ? r.json() : null))
+          .then((geo) => setGeoData(geo))
+          .catch(() => setGeoData(null))
+          .finally(() => setGeoLoading(false));
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : t.tools.dns.lookupFailed);
@@ -492,6 +578,96 @@ export default function DnsClient() {
                 })}
               </Box>
             </Paper>
+          )}
+
+          {/* IP Geo card (shown when querying an IP) */}
+          {hasResults && queriedIsIp && (geoLoading || geoData) && (
+            <Card
+              elevation={0}
+              sx={{
+                border: 1,
+                borderColor: "divider",
+                borderRadius: 2,
+                mb: 3,
+              }}
+            >
+              <CardContent sx={{ p: 3, "&:last-child": { pb: 3 } }}>
+                <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 2 }}>
+                  IP Geolocation
+                </Typography>
+                {geoLoading && !geoData ? (
+                  <Box sx={{ display: "flex", justifyContent: "center", py: 2 }}>
+                    <CircularProgress size={18} />
+                  </Box>
+                ) : geoData ? (
+                  <Box sx={{ display: "flex", flexDirection: "column" }}>
+                    <GeoRow
+                      label="Location"
+                      value={
+                        [
+                          geoData.country,
+                          geoData.regionName,
+                          geoData.city,
+                          geoData.district,
+                        ]
+                          .filter(Boolean)
+                          .join(", ") || "—"
+                      }
+                    />
+                    <GeoRow
+                      label="Coordinates"
+                      value={
+                        geoData.lat && geoData.lon
+                          ? `${geoData.lat}, ${geoData.lon}`
+                          : "—"
+                      }
+                    />
+                    <GeoRow
+                      label="Timezone"
+                      value={
+                        geoData.timezone
+                          ? `${geoData.timezone} (UTC${
+                              geoData.offset >= 0 ? "+" : ""
+                            }${geoData.offset / 3600})`
+                          : "—"
+                      }
+                    />
+                    <GeoRow
+                      label="ISP"
+                      value={geoData.isp || "—"}
+                    />
+                    <GeoRow
+                      label="Organization"
+                      value={geoData.org || "—"}
+                    />
+                    <GeoRow
+                      label="ASN"
+                      value={
+                        geoData.as
+                          ? `${geoData.as}${
+                              geoData.asname ? ` — ${geoData.asname}` : ""
+                            }`
+                          : "—"
+                      }
+                    />
+                    <GeoRow
+                      label="Reverse DNS"
+                      value={geoData.reverse || "—"}
+                    />
+                    <GeoRow
+                      label="Network"
+                      value={[
+                        geoData.mobile && "Mobile",
+                        geoData.proxy && "Proxy",
+                        geoData.hosting && "Hosting",
+                      ]
+                        .filter(Boolean)
+                        .join(", ") || "Standard"}
+                    />
+                  </Box>
+                ) : null}
+              </CardContent>
+            </Card>
           )}
 
           {/* Results */}

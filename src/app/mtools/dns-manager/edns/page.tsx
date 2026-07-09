@@ -35,6 +35,7 @@ import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 import CachedIcon from "@mui/icons-material/Cached";
 import PublicIcon from "@mui/icons-material/Public";
 import LinkIcon from "@mui/icons-material/Link";
+import AccessTimeIcon from "@mui/icons-material/AccessTime";
 import { alpha } from "@mui/material";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
@@ -396,9 +397,10 @@ function EdnsPageContent() {
               <Button
                 variant="text"
                 onClick={(e) => setTimeMenuAnchor(e.currentTarget)}
+                startIcon={<AccessTimeIcon />}
                 sx={{ textTransform: "none", borderRadius: 2, minWidth: "auto" }}
               >
-                Quick Time ⏱️
+                Quick Time
               </Button>
               <Menu anchorEl={timeMenuAnchor} open={Boolean(timeMenuAnchor)} onClose={() => setTimeMenuAnchor(null)}>
                 {QUICK_TIMES.map((qt) => (
@@ -541,6 +543,15 @@ function EdnsPageContent() {
                     EDNS Country
                   </TableCell>
                   <TableCell sx={{ fontWeight: 700, fontFamily: "var(--font-jetbrains-mono), monospace", fontSize: "0.8rem" }}>
+                    EDNS City
+                  </TableCell>
+                  <TableCell sx={{ fontWeight: 700, fontFamily: "var(--font-jetbrains-mono), monospace", fontSize: "0.8rem" }}>
+                    EDNS ASN
+                  </TableCell>
+                  <TableCell sx={{ fontWeight: 700, fontFamily: "var(--font-jetbrains-mono), monospace", fontSize: "0.8rem" }}>
+                    EDNS AS Name
+                  </TableCell>
+                  <TableCell sx={{ fontWeight: 700, fontFamily: "var(--font-jetbrains-mono), monospace", fontSize: "0.8rem" }}>
                     NSID
                   </TableCell>
                   <TableCell sx={{ fontWeight: 700, fontFamily: "var(--font-jetbrains-mono), monospace", fontSize: "0.8rem" }}>
@@ -617,6 +628,26 @@ function EdnsPageContent() {
                     </TableCell>
                     <TableCell sx={{ fontFamily: "var(--font-jetbrains-mono), monospace", fontSize: "0.8rem" }}>
                       <Chip label={item.edns_country_code || "—"} size="small" variant="outlined" />
+                    </TableCell>
+                    <TableCell sx={{ fontFamily: "var(--font-jetbrains-mono), monospace", fontSize: "0.8rem" }}>
+                      {item.edns_city || "—"}
+                    </TableCell>
+                    <TableCell sx={{ fontFamily: "var(--font-jetbrains-mono), monospace", fontSize: "0.8rem" }}>
+                      {item.edns_asn || "—"}
+                    </TableCell>
+                    <TableCell
+                      sx={{
+                        fontFamily: "var(--font-jetbrains-mono), monospace",
+                        fontSize: "0.8rem",
+                        maxWidth: 140,
+                        whiteSpace: "nowrap",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                      }}
+                    >
+                      <Tooltip title={item.edns_as_name || ""}>
+                        <span>{item.edns_as_name || "—"}</span>
+                      </Tooltip>
                     </TableCell>
                     <TableCell sx={{ fontFamily: "var(--font-jetbrains-mono), monospace", fontSize: "0.75rem", wordBreak: "break-all", maxWidth: 120 }}>
                       {item.nsid || "—"}

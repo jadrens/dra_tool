@@ -35,8 +35,8 @@ import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 import HistoryIcon from "@mui/icons-material/History";
 import CachedIcon from "@mui/icons-material/Cached";
 import LinkIcon from "@mui/icons-material/Link";
+import AccessTimeIcon from "@mui/icons-material/AccessTime";
 import { alpha } from "@mui/material";
-import Link from "next/link";
 import { hasToken, listQueries, deleteQueries, deleteQueryById } from "@/lib/dns-manager/api";
 import type { QueryItem } from "@/lib/dns-manager/types";
 import { useDocumentTitle } from "@/hooks/useDocumentTitle";
@@ -79,6 +79,9 @@ export default function QueriesPage() {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleteFilteredOpen, setDeleteFilteredOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
+
+  // EDNS detail
+  const [ednsDetailItem, setEdnsDetailItem] = useState<QueryItem | null>(null);
 
   // Toast
   const [toast, setToast] = useState({
@@ -490,9 +493,10 @@ export default function QueriesPage() {
               <Button
                 variant="text"
                 onClick={(e) => setTimeMenuAnchor(e.currentTarget)}
+                startIcon={<AccessTimeIcon />}
                 sx={{ textTransform: "none", borderRadius: 2, minWidth: "auto" }}
               >
-                Quick Time ⏱️
+                Quick Time
               </Button>
               <Menu
                 anchorEl={timeMenuAnchor}
@@ -704,6 +708,24 @@ export default function QueriesPage() {
                       fontSize: "0.8rem",
                     }}
                   >
+                    ASN
+                  </TableCell>
+                  <TableCell
+                    sx={{
+                      fontWeight: 700,
+                      fontFamily: "var(--font-jetbrains-mono), monospace",
+                      fontSize: "0.8rem",
+                    }}
+                  >
+                    AS Name
+                  </TableCell>
+                  <TableCell
+                    sx={{
+                      fontWeight: 700,
+                      fontFamily: "var(--font-jetbrains-mono), monospace",
+                      fontSize: "0.8rem",
+                    }}
+                  >
                     Cached
                   </TableCell>
                   <TableCell
@@ -827,6 +849,28 @@ export default function QueriesPage() {
                         fontSize: "0.8rem",
                       }}
                     >
+                      {item.asn || "-"}
+                    </TableCell>
+                    <TableCell
+                      sx={{
+                        fontFamily: "var(--font-jetbrains-mono), monospace",
+                        fontSize: "0.8rem",
+                        maxWidth: 160,
+                        whiteSpace: "nowrap",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                      }}
+                    >
+                      <Tooltip title={item.as_name || ""}>
+                        <span>{item.as_name || "-"}</span>
+                      </Tooltip>
+                    </TableCell>
+                    <TableCell
+                      sx={{
+                        fontFamily: "var(--font-jetbrains-mono), monospace",
+                        fontSize: "0.8rem",
+                      }}
+                    >
                       {item.geo_cached ? (
                         <Chip
                           icon={<CachedIcon sx={{ fontSize: 12 }} />}
@@ -846,23 +890,20 @@ export default function QueriesPage() {
                       }}
                     >
                       {item.edns_subnet ? (
-                        <Button
-                          component={Link}
-                          href={`/mtools/dns-manager/edns?id=${item.id}`}
+                        <Chip
+                          icon={<LinkIcon sx={{ fontSize: 12 }} />}
+                          label="EDNS"
                           size="small"
                           variant="outlined"
                           color="info"
-                          startIcon={<LinkIcon />}
+                          clickable
+                          onClick={() => setEdnsDetailItem(item)}
                           sx={{
-                            textTransform: "none",
-                            borderRadius: 1,
+                            fontFamily: "var(--font-jetbrains-mono), monospace",
                             fontSize: "0.7rem",
-                            py: 0.25,
-                            px: 0.75,
+                            borderRadius: 1,
                           }}
-                        >
-                          EDNS
-                        </Button>
+                        />
                       ) : (
                         <Typography variant="caption" color="text.disabled">—</Typography>
                       )}
@@ -987,6 +1028,105 @@ export default function QueriesPage() {
             sx={{ textTransform: "none", borderRadius: 2 }}
           >
             {deleting ? "Deleting..." : "Delete Filtered"}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* EDNS detail dialog */}
+      <Dialog
+        open={ednsDetailItem !== null}
+        onClose={() => setEdnsDetailItem(null)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle sx={{ fontWeight: 700 }}>
+          EDNS Client Subnet — #{ednsDetailItem?.id} {ednsDetailItem?.domain}
+        </DialogTitle>
+        <DialogContent>
+          <Table size="small">
+            <TableHead>
+              <TableRow sx={{ bgcolor: alpha(theme.palette.action.hover, 0.04) }}>
+                <TableCell />
+                <TableCell sx={{ fontWeight: 700, fontSize: "0.8rem" }}>Client Geo</TableCell>
+                <TableCell sx={{ fontWeight: 700, fontSize: "0.8rem" }}>EDNS Geo</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {(
+                [
+                  { label: "Subnet", client: ednsDetailItem?.client_ip, edns: ednsDetailItem?.edns_subnet },
+                  { label: "Country", client: ednsDetailItem?.country_code, edns: ednsDetailItem?.edns_country_code },
+                  { label: "City", client: ednsDetailItem?.city, edns: ednsDetailItem?.edns_city },
+                  { label: "ASN", client: ednsDetailItem?.asn, edns: ednsDetailItem?.edns_asn },
+                  { label: "AS Name", client: ednsDetailItem?.as_name, edns: ednsDetailItem?.edns_as_name },
+                  { label: "NSID", client: "—", edns: ednsDetailItem?.nsid },
+                ] as const
+              ).map((row) => (
+                <TableRow
+                  key={row.label}
+                  sx={{
+                    bgcolor:
+                      row.client && row.edns && row.client !== row.edns
+                        ? alpha(theme.palette.warning.main, 0.08)
+                        : undefined,
+                  }}
+                >
+                  <TableCell
+                    sx={{
+                      fontWeight: 700,
+                      fontFamily: "var(--font-jetbrains-mono), monospace",
+                      fontSize: "0.8rem",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {row.label}
+                  </TableCell>
+                  <TableCell
+                    sx={{
+                      fontFamily: "var(--font-jetbrains-mono), monospace",
+                      fontSize: "0.8rem",
+                      wordBreak: "break-all",
+                    }}
+                  >
+                    <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+                      <span>{row.client || "—"}</span>
+                      {row.client && row.label !== "NSID" && (
+                        <IconButton size="small" onClick={() => copyText(row.client!)}>
+                          <ContentCopyIcon sx={{ fontSize: 12 }} />
+                        </IconButton>
+                      )}
+                    </Box>
+                  </TableCell>
+                  <TableCell
+                    sx={{
+                      fontFamily: "var(--font-jetbrains-mono), monospace",
+                      fontSize: "0.8rem",
+                      wordBreak: "break-all",
+                    }}
+                  >
+                    <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+                      <span>{row.edns || "—"}</span>
+                      {row.edns && row.label !== "NSID" && (
+                        <IconButton size="small" onClick={() => copyText(row.edns!)}>
+                          <ContentCopyIcon sx={{ fontSize: 12 }} />
+                        </IconButton>
+                      )}
+                    </Box>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+          <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: "block" }}>
+            Rows highlighted when Client Geo differs from EDNS Geo.
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 3 }}>
+          <Button
+            onClick={() => setEdnsDetailItem(null)}
+            sx={{ textTransform: "none", borderRadius: 2 }}
+          >
+            Close
           </Button>
         </DialogActions>
       </Dialog>

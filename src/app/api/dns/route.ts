@@ -9,8 +9,10 @@ import type {
 } from "dns";
 
 // Record types that Node.js dns module supports natively
+// PTR is excluded — system DNS may not have the PTR record;
+// we route PTR through DoH after converting the IP to .arpa format.
 const NATIVE_TYPES = new Set([
-  "A", "AAAA", "CNAME", "MX", "TXT", "NS", "SOA", "SRV", "PTR", "NAPTR", "CAA",
+  "A", "AAAA", "CNAME", "MX", "TXT", "NS", "SOA", "SRV", "NAPTR", "CAA",
 ]);
 
 interface DnsRecord {
@@ -59,6 +61,41 @@ function formatNaptr(records: NaptrRecord[]): DnsRecord[] {
     TTL: 0,
     data: `${r.order} ${r.preference} "${r.flags}" "${r.service}" "${r.regexp}" ${r.replacement}`,
   }));
+}
+
+/**
+ * Convert an IPv4 or IPv6 address to its .arpa reverse-lookup domain.
+ * IPv4: 203.0.113.1 → 1.113.0.203.in-addr.arpa
+ * IPv6: 2001:db8::1  → 1.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.8.b.d.0.1.0.0.2.ip6.arpa
+ */
+function ipToArpa(ip: string): string {
+  if (ip.includes(":")) {
+    // IPv6: expand, reverse nibbles
+    const expanded = (() => {
+      const parts = ip.split("::");
+      if (parts.length > 2) return ip; // invalid
+      if (parts.length === 2) {
+        const left = parts[0] ? parts[0].split(":") : [];
+        const right = parts[1] ? parts[1].split(":") : [];
+        const missing = 8 - (left.length + right.length);
+        const middle = Array.from({ length: missing }, () => "0000");
+        return [...left, ...middle, ...right]
+          .map((g) => g.padStart(4, "0"))
+          .join(":");
+      }
+      return ip
+        .split(":")
+        .map((g) => g.padStart(4, "0"))
+        .join(":");
+    })();
+    const nibbles = expanded.replace(/:/g, "").split("").reverse().join(".");
+    return `${nibbles}.ip6.arpa`;
+  }
+
+  // IPv4: reverse octets
+  const octets = ip.split(".");
+  if (octets.length !== 4) return ip; // not a valid IP, pass through
+  return `${octets.reverse().join(".")}.in-addr.arpa`;
 }
 
 function formatCaa(records: CaaRecord[]): DnsRecord[] {
@@ -148,15 +185,6 @@ async function resolveWithNative(
       const records = await dnsPromises.resolveSrv(hostname);
       return formatSrv(records);
     }
-    case "PTR": {
-      const records = await dnsPromises.resolvePtr(hostname);
-      return records.map((r) => ({
-        name: hostname,
-        type: "PTR",
-        TTL: 0,
-        data: r,
-      }));
-    }
     case "NAPTR": {
       const records = await dnsPromises.resolveNaptr(hostname);
       return formatNaptr(records);
@@ -183,13 +211,13 @@ async function resolveWithDoH(
   }
   const data = await res.json();
 
-  // Normalize section records
+  // Normalize section records — strip trailing dot from PTR data
   const normalize = (records: Array<{ name: string; type: number; TTL: number; data: string }> | undefined): DnsRecord[] =>
     (records || []).map((r) => ({
       name: r.name,
       type: rrtype,
       TTL: r.TTL,
-      data: r.data,
+      data: rrtype === "PTR" && r.data.endsWith(".") ? r.data.slice(0, -1) : r.data,
     }));
 
   return {
@@ -234,15 +262,16 @@ export async function GET(request: NextRequest) {
         Authority: [],
         Additional: [],
       });
-    } else {
-      // For record types not natively supported by Node.js, use DoH server-side
-      const result = await resolveWithDoH(domain, rrtype);
-      return NextResponse.json({
-        domain,
-        type: rrtype,
-        ...result,
-      });
     }
+
+    // PTR needs the IP converted to .arpa format for DoH lookup
+    const dohName = rrtype === "PTR" ? ipToArpa(domain) : domain;
+    const result = await resolveWithDoH(dohName, rrtype);
+    return NextResponse.json({
+      domain,
+      type: rrtype,
+      ...result,
+    });
   } catch (err) {
     const message = err instanceof Error ? err.message : "DNS lookup failed";
 

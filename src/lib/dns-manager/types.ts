@@ -54,10 +54,15 @@ export interface QueryItem {
   client_ip: string;
   country_code: string;
   city: string;
+  geo_cached?: boolean;
+  asn?: string;
+  as_name?: string;
   edns_subnet?: string;
   edns_country_code?: string;
+  edns_city?: string;
+  edns_asn?: string;
+  edns_as_name?: string;
   nsid?: string;
-  geo_cached?: boolean;
   created_at: string;
 }
 
@@ -70,6 +75,9 @@ export interface EdnsItem {
   city: string;
   subnet: string;
   edns_country_code: string;
+  edns_city: string;
+  edns_asn: string;
+  edns_as_name: string;
   nsid: string;
   created_at: string;
 }
@@ -88,6 +96,8 @@ export interface GeoCacheEntry {
   subnet: string;
   country_code: string;
   city: string;
+  asn?: string;
+  as_name?: string;
   expires_at: string;
 }
 

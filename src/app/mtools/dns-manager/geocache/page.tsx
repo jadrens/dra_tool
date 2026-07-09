@@ -426,6 +426,12 @@ export default function GeocachePage() {
                   City
                 </TableCell>
                 <TableCell sx={{ fontWeight: 700, fontFamily: "var(--font-jetbrains-mono), monospace", fontSize: "0.8rem" }}>
+                  ASN
+                </TableCell>
+                <TableCell sx={{ fontWeight: 700, fontFamily: "var(--font-jetbrains-mono), monospace", fontSize: "0.8rem" }}>
+                  AS Name
+                </TableCell>
+                <TableCell sx={{ fontWeight: 700, fontFamily: "var(--font-jetbrains-mono), monospace", fontSize: "0.8rem" }}>
                   Expires
                 </TableCell>
                 <TableCell sx={{ fontWeight: 700, width: 48 }} />
@@ -470,6 +476,23 @@ export default function GeocachePage() {
                   </TableCell>
                   <TableCell sx={{ fontFamily: "var(--font-jetbrains-mono), monospace", fontSize: "0.8rem" }}>
                     {entry.city || "—"}
+                  </TableCell>
+                  <TableCell sx={{ fontFamily: "var(--font-jetbrains-mono), monospace", fontSize: "0.8rem" }}>
+                    {entry.asn || "—"}
+                  </TableCell>
+                  <TableCell
+                    sx={{
+                      fontFamily: "var(--font-jetbrains-mono), monospace",
+                      fontSize: "0.8rem",
+                      maxWidth: 160,
+                      whiteSpace: "nowrap",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                    }}
+                  >
+                    <Tooltip title={entry.as_name || ""}>
+                      <span>{entry.as_name || "—"}</span>
+                    </Tooltip>
                   </TableCell>
                   <TableCell sx={{ fontFamily: "var(--font-jetbrains-mono), monospace", fontSize: "0.8rem", whiteSpace: "nowrap" }}>
                     {formatTime(entry.expires_at)}
