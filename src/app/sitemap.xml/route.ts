@@ -30,6 +30,12 @@ export async function GET() {
     <priority>0.7</priority>
   </url>
   <url>
+    <loc>${BASE_URL}/tools/colour-picker</loc>
+    <lastmod>${today}</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
     <loc>${BASE_URL}/tools/dns</loc>
     <lastmod>${today}</lastmod>
     <changefreq>monthly</changefreq>

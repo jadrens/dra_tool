@@ -20,11 +20,29 @@ export default function Home() {
               }}
             >
               <Avatar
-                src="/avatar.png"
+                src="/avatar.svg"
                 alt="Jadren Rayne"
                 sx={{
-                  width: 120,
-                  height: 120,
+                  width: 136,
+                  height: 136,
+                  cursor: "pointer",
+                  transition: "transform 220ms cubic-bezier(0.2, 0.8, 0.2, 1), filter 220ms ease",
+                  willChange: "transform",
+                  "@media (hover: hover) and (pointer: fine)": {
+                    "&:hover": {
+                      transform: "scale(1.1) rotate(-2deg)",
+                      filter: "brightness(1.05)",
+                    },
+                  },
+                  "&:active": {
+                    transform: "scale(0.94) rotate(0deg)",
+                  },
+                  "@media (prefers-reduced-motion: reduce)": {
+                    transition: "none",
+                    "&:hover, &:active": {
+                      transform: "none",
+                    },
+                  },
                   "html[data-theme='dark'] &": {
                     boxShadow: `
                       0 0 30px 8px rgba(255, 255, 255, 0.09),

@@ -130,7 +130,7 @@ export default function BouncingAvatar() {
     let prevVelY = avatar.velocity.y;
 
     const avatarImg = new Image();
-    avatarImg.src = "/avatar.png";
+    avatarImg.src = "/avatar.svg";
     avatarImgRef.current = avatarImg;
 
     let frameId: number;

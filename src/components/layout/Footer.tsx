@@ -32,10 +32,10 @@ export default function Footer() {
         }}
       >
         <Avatar
-          src="/avatar.png"
+          src="/avatar.svg"
           alt="jadren"
           className="footer-avatar"
-          sx={{ width: 40, height: 40, transition: "transform 0.2s", "&:hover": { transform: "scale(1.2)" } }}
+          sx={{ width: 48, height: 48, transition: "transform 0.2s", "&:hover": { transform: "scale(1.2)" } }}
         />
         <Typography variant="body2" color="text.secondary">
           &copy; {year} jadren

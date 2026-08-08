@@ -1,6 +1,6 @@
 "use client";
 
-import { Box, Typography, Card, CardContent, CardActionArea, Avatar } from "@mui/material";
+import { Box, Typography, Card, CardActionArea } from "@mui/material";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import Link from "next/link";
@@ -12,6 +12,7 @@ import DnsIcon from "@mui/icons-material/Dns";
 import LanguageIcon from "@mui/icons-material/Language";
 import ShieldIcon from "@mui/icons-material/Shield";
 import QrCode2Icon from "@mui/icons-material/QrCode2";
+import ColorLensIcon from "@mui/icons-material/ColorLens";
 
 interface ToolItem {
   key: string;
@@ -27,6 +28,13 @@ export default function ToolsClient() {
   useDocumentTitle(t.tools.title);
 
   const tools: ToolItem[] = [
+    {
+      key: "colourPicker",
+      title: t.tools.colourPicker.title,
+      description: t.tools.colourPicker.description,
+      href: "/tools/colour-picker",
+      icon: <ColorLensIcon sx={{ fontSize: 32 }} />,
+    },
     {
       key: "base64",
       title: t.tools.base64.title,
@@ -131,7 +139,7 @@ export default function ToolsClient() {
                 <CardActionArea
                   component={Link}
                   href={tool.href}
-                  sx={{ p: 3, display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 2 }}
+                  sx={{ p: 3, display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 2, height: "100%", marginHorizontal: "auto"}}
                 >
                   <Box
                     sx={{
