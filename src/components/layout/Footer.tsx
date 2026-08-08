@@ -2,6 +2,7 @@
 
 import { Box, Typography, Chip, Avatar } from "@mui/material";
 import EmailIcon from "@mui/icons-material/Email";
+import LinkIcon from "@mui/icons-material/Link";
 import GitHubIcon from "@mui/icons-material/GitHub";
 import BouncingAvatar from "./BouncingAvatar";
 import SITE_CONFIG from "@/var/config";
@@ -53,6 +54,16 @@ export default function Footer() {
               sx={{ p: 1.5 }}
             />
           )}
+          <Chip
+            icon={<LinkIcon sx={{ fontSize: 14 }} />}
+            label="Back to Nav"
+            component="a"
+            href="https://jadren.me"
+            clickable
+            size="small"
+            variant="outlined"
+            sx={{ p: 1.5 }}
+          />
           {SITE_CONFIG.githubClipEnabled && (
             <Chip
               icon={<GitHubIcon sx={{ fontSize: 14 }} />}

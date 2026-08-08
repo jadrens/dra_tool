@@ -21,7 +21,7 @@ import type {
 
 const STORAGE_KEY_TOKEN = "dns-manager-token";
 const STORAGE_KEY_API_BASE = "dns-manager-api-base";
-const DEFAULT_API_BASE = "https://hkns.rayou.me";
+const DEFAULT_API_BASE = "https://hkns.koi.ci";
 
 // --- Token helpers (localStorage) ---
 
