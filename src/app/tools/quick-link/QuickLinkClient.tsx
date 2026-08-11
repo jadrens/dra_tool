@@ -340,7 +340,13 @@ export default function QuickLinkClient() {
                 {copy.loginDescription}
               </Typography>
               <Stack direction={{ xs: "column", sm: "row" }} spacing={1} sx={{ justifyContent: "center" }}>
-                <Button component={Link} href="/login" variant="contained">{copy.login}</Button>
+                <Button
+                  component={Link}
+                  href="/login?next=%2Ftools%2Fquick-link"
+                  variant="contained"
+                >
+                  {copy.login}
+                </Button>
                 <Button component={Link} href="/register" variant="outlined">{copy.register}</Button>
               </Stack>
             </CardContent>

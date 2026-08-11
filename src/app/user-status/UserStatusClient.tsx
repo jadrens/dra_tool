@@ -112,7 +112,13 @@ export default function UserStatusClient() {
                 {copy.loggedOutDescription}
               </Typography>
               <Stack direction={{ xs: "column", sm: "row" }} spacing={1} sx={{ justifyContent: "center" }}>
-                <Button component={Link} href="/login" variant="contained">{copy.login}</Button>
+                <Button
+                  component={Link}
+                  href="/login?next=%2Fuser-status"
+                  variant="contained"
+                >
+                  {copy.login}
+                </Button>
                 <Button component={Link} href="/register" variant="outlined">{copy.register}</Button>
               </Stack>
             </CardContent>
@@ -123,4 +129,3 @@ export default function UserStatusClient() {
     </div>
   );
 }
-
