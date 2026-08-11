@@ -54,36 +54,38 @@ jobs:
           passphrase: ${{ secrets.SSH_KEY_PASSPHRASE }}
           envs: WORK_PATH,DNS_MANAGER_TOKEN,POSTGRES_USER,POSTGRES_PASSWORD,POSTGRES_DB,POSTGRES_HOST,POSTGRES_PORT,POSTGRES_SSL,JWT_SECRET,RESEND_API_KEY
           script: |
-            set -e
-            : "${WORK_PATH:?Missing WORK_PATH}"
-            : "${DNS_MANAGER_TOKEN:?Missing DNS_MANAGER_TOKEN}"
-            : "${POSTGRES_USER:?Missing POSTGRES_USER}"
-            : "${POSTGRES_PASSWORD:?Missing POSTGRES_PASSWORD}"
-            : "${POSTGRES_DB:?Missing POSTGRES_DB}"
-            : "${POSTGRES_HOST:?Missing POSTGRES_HOST}"
-            : "${POSTGRES_PORT:?Missing POSTGRES_PORT}"
-            : "${POSTGRES_SSL:?Missing POSTGRES_SSL}"
-            : "${JWT_SECRET:?Missing JWT_SECRET}"
-            : "${RESEND_API_KEY:?Missing RESEND_API_KEY}"
-            cd $WORK_PATH
-            export PATH="$HOME/.bun/bin:$PATH"
-            git fetch origin run
-            git checkout run
-            git reset --hard origin/run
-            bun --bun --smol install
-            rm -rf build
-            tar -xzf ~/blog-build.tar.gz
-            rm -f ~/blog-build.tar.gz
-            umask 077
-            touch .env
-            sed -i '/^DNS_MANAGER_TOKEN=/d; /^POSTGRES_USER=/d; /^POSTGRES_PASSWORD=/d; /^POSTGRES_DB=/d; /^POSTGRES_HOST=/d; /^POSTGRES_PORT=/d; /^POSTGRES_SSL=/d; /^JWT_SECRET=/d; /^RESEND_API_KEY=/d' .env
-            echo "DNS_MANAGER_TOKEN=$DNS_MANAGER_TOKEN" >> .env
-            printf 'POSTGRES_USER=%s\nPOSTGRES_PASSWORD=%s\nPOSTGRES_DB=%s\n' \
-              "$POSTGRES_USER" "$POSTGRES_PASSWORD" "$POSTGRES_DB" >> .env
-            printf 'POSTGRES_HOST=%s\n' "$POSTGRES_HOST" >> .env
-            printf 'POSTGRES_PORT=%s\n' "$POSTGRES_PORT" >> .env
-            printf 'POSTGRES_SSL=%s\n' "$POSTGRES_SSL" >> .env
-            printf 'JWT_SECRET=%s\n' "$JWT_SECRET" >> .env
-            printf 'RESEND_API_KEY=%s\n' "$RESEND_API_KEY" >> .env
-            bun run db:migrate
-            sudo systemctl restart dra-tool.service
+            exec bash -c '
+              set -e
+              : "${WORK_PATH:?Missing WORK_PATH}"
+              : "${DNS_MANAGER_TOKEN:?Missing DNS_MANAGER_TOKEN}"
+              : "${POSTGRES_USER:?Missing POSTGRES_USER}"
+              : "${POSTGRES_PASSWORD:?Missing POSTGRES_PASSWORD}"
+              : "${POSTGRES_DB:?Missing POSTGRES_DB}"
+              : "${POSTGRES_HOST:?Missing POSTGRES_HOST}"
+              : "${POSTGRES_PORT:?Missing POSTGRES_PORT}"
+              : "${POSTGRES_SSL:?Missing POSTGRES_SSL}"
+              : "${JWT_SECRET:?Missing JWT_SECRET}"
+              : "${RESEND_API_KEY:?Missing RESEND_API_KEY}"
+              cd "$WORK_PATH"
+              export PATH="$HOME/.bun/bin:$PATH"
+              git fetch origin run
+              git checkout run
+              git reset --hard origin/run
+              bun --bun --smol install
+              rm -rf build
+              tar -xzf "$HOME/blog-build.tar.gz"
+              rm -f "$HOME/blog-build.tar.gz"
+              umask 077
+              touch .env
+              sed -i "/^DNS_MANAGER_TOKEN=/d; /^POSTGRES_USER=/d; /^POSTGRES_PASSWORD=/d; /^POSTGRES_DB=/d; /^POSTGRES_HOST=/d; /^POSTGRES_PORT=/d; /^POSTGRES_SSL=/d; /^JWT_SECRET=/d; /^RESEND_API_KEY=/d" .env
+              echo "DNS_MANAGER_TOKEN=$DNS_MANAGER_TOKEN" >> .env
+              printf "POSTGRES_USER=%s\nPOSTGRES_PASSWORD=%s\nPOSTGRES_DB=%s\n" \
+                "$POSTGRES_USER" "$POSTGRES_PASSWORD" "$POSTGRES_DB" >> .env
+              printf "POSTGRES_HOST=%s\n" "$POSTGRES_HOST" >> .env
+              printf "POSTGRES_PORT=%s\n" "$POSTGRES_PORT" >> .env
+              printf "POSTGRES_SSL=%s\n" "$POSTGRES_SSL" >> .env
+              printf "JWT_SECRET=%s\n" "$JWT_SECRET" >> .env
+              printf "RESEND_API_KEY=%s\n" "$RESEND_API_KEY" >> .env
+              bun run db:migrate
+              sudo systemctl restart dra-tool.service
+            '
