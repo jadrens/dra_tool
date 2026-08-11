@@ -2,6 +2,7 @@ import { mkdirSync } from "node:fs";
 import { isIP } from "node:net";
 import { dirname, resolve } from "node:path";
 import { Database } from "bun:sqlite";
+import AUTH_CONFIG from "@/var/auth";
 
 const EMAIL_WINDOW_MS = 3 * 60 * 60 * 1000;
 const EMAIL_MAX_SENDS = 6;
@@ -19,8 +20,7 @@ export interface EmailSendRateLimiter {
 }
 
 export function createEmailSendRateLimiter(
-  databasePath = process.env.RATE_LIMIT_DB_PATH ||
-    ".data/email-send-monitor.sqlite"
+  databasePath: string = AUTH_CONFIG.emailRateLimitDbPath
 ): EmailSendRateLimiter {
   const resolvedPath =
     databasePath === ":memory:" ? databasePath : resolve(databasePath);

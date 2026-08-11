@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { mkdirSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { Database } from "bun:sqlite";
+import AUTH_CONFIG from "@/var/auth";
 
 const WINDOW_MS = 15 * 60 * 1000;
 const IDENTIFIER_IP_MAX_ATTEMPTS = 8;
@@ -24,9 +25,7 @@ function identifierKey(identifier: string) {
 }
 
 export function createLoginRateLimiter(
-  databasePath =
-    process.env.LOGIN_RATE_LIMIT_DB_PATH ||
-    ".data/login-attempt-monitor.sqlite"
+  databasePath: string = AUTH_CONFIG.loginRateLimitDbPath
 ): LoginRateLimiter {
   const resolvedPath =
     databasePath === ":memory:" ? databasePath : resolve(databasePath);
@@ -124,4 +123,3 @@ export function resetLoginAttempts(identifier: string, ip: string) {
 }
 
 export const loginRateLimitWindowSeconds = WINDOW_MS / 1000;
-

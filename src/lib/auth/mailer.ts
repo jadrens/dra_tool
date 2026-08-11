@@ -3,8 +3,8 @@ import {
   verificationCodeEmail,
   type VerificationEmailLocale,
 } from "./emails/verification-code";
+import AUTH_CONFIG from "@/var/auth";
 
-const DEFAULT_FROM_EMAIL = "tool_auth@jadren.me";
 const CODE_LIFETIME_MINUTES = 10;
 
 export async function sendVerificationEmail(
@@ -20,7 +20,7 @@ export async function sendVerificationEmail(
   const resend = new Resend(apiKey);
   const content = verificationCodeEmail(code, locale, CODE_LIFETIME_MINUTES);
   const { data, error } = await resend.emails.send({
-    from: process.env.RESEND_FROM_EMAIL?.trim() || DEFAULT_FROM_EMAIL,
+    from: AUTH_CONFIG.resendFromEmail,
     to: [email],
     subject: content.subject,
     html: content.html,

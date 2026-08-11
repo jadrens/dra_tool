@@ -29,9 +29,6 @@ POSTGRES_PORT=5432
 POSTGRES_SSL=true
 JWT_SECRET=... # at least 32 characters
 RESEND_API_KEY=re_...
-RESEND_FROM_EMAIL=tool_auth@jadren.me
-RATE_LIMIT_DB_PATH=.data/email-send-monitor.sqlite
-LOGIN_RATE_LIMIT_DB_PATH=.data/login-attempt-monitor.sqlite
 ```
 
 Optional database settings are `POSTGRES_HOST` (default `127.0.0.1`),
@@ -104,7 +101,7 @@ database and only issues a new token when the current status is `0` or `1`.
 
 Creates a six-digit code valid for ten minutes. The database stores only its
 bcrypt hash. Resend sends the HTML and plain-text verification email from
-`tool_auth@jadren.me`. `locale` accepts `en` or `zh` and defaults to English.
+`auth@jadren.me`. `locale` accepts `en` or `zh` and defaults to English.
 A local Bun SQLite database atomically limits each email
 to six attempts per three hours and each client IP to 30 attempts per hour.
 Either limit returns HTTP `429`. Monitoring rows older than three hours are
