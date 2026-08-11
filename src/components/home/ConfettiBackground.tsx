@@ -329,7 +329,8 @@ export default function ConfettiBackground() {
     <canvas
       ref={canvasRef}
       className="fixed inset-0 z-0"
-      style={{ cursor: "default" }}
+      aria-hidden="true"
+      style={{ cursor: "default", pointerEvents: "none" }}
     />
   );
 }

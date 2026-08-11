@@ -17,7 +17,6 @@ import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 import DownloadIcon from "@mui/icons-material/Download";
 import QrCode2Icon from "@mui/icons-material/QrCode2";
 import { alpha } from "@mui/material";
-import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import { useI18n } from "@/lib/i18n";
 import { useDocumentTitle } from "@/hooks/useDocumentTitle";
@@ -99,8 +98,7 @@ export default function QrcodeClient() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col">
-      <Navbar />
+    <div className="page-below-navbar flex flex-col">
       <Box
         component="main"
         sx={{

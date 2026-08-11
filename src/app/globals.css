@@ -36,6 +36,16 @@ body {
   transition: background-color 0.3s ease, color 0.3s ease;
 }
 
+.page-below-navbar {
+  min-height: calc(100dvh - 64px);
+}
+
+@media (max-width: 599.95px) {
+  .page-below-navbar {
+    min-height: calc(100dvh - 56px);
+  }
+}
+
 a {
   color: #8b9dc3;
   text-decoration: none;

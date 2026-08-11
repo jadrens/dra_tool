@@ -1,7 +1,6 @@
 "use client";
 
 import { Box, Typography, Card, CardActionArea } from "@mui/material";
-import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import Link from "next/link";
 import { useI18n } from "@/lib/i18n";
@@ -13,6 +12,7 @@ import LanguageIcon from "@mui/icons-material/Language";
 import ShieldIcon from "@mui/icons-material/Shield";
 import QrCode2Icon from "@mui/icons-material/QrCode2";
 import ColorLensIcon from "@mui/icons-material/ColorLens";
+import LinkRoundedIcon from "@mui/icons-material/LinkRounded";
 
 interface ToolItem {
   key: string;
@@ -28,6 +28,13 @@ export default function ToolsClient() {
   useDocumentTitle(t.tools.title);
 
   const tools: ToolItem[] = [
+    {
+      key: "quickLink",
+      title: t.tools.quickLink.title,
+      description: t.tools.quickLink.cardDescription,
+      href: "/tools/quick-link",
+      icon: <LinkRoundedIcon sx={{ fontSize: 32 }} />,
+    },
     {
       key: "colourPicker",
       title: t.tools.colourPicker.title,
@@ -73,8 +80,7 @@ export default function ToolsClient() {
   ];
 
   return (
-    <div className="min-h-screen flex flex-col">
-      <Navbar />
+    <div className="page-below-navbar flex flex-col">
       <Box
         component="main"
         sx={{

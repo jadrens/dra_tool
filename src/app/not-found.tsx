@@ -1,7 +1,6 @@
 "use client";
 
 import { Box, Typography, Button } from "@mui/material";
-import Navbar from "@/components/layout/Navbar";
 import Link from "next/link";
 import { useI18n } from "@/lib/i18n";
 
@@ -17,8 +16,7 @@ export default function NotFound() {
   const digits = ["4", "0", "4"];
 
   return (
-    <div className="min-h-screen flex flex-col">
-      <Navbar />
+    <div className="page-below-navbar flex flex-col">
       <Box
         sx={{
           flex: 1,

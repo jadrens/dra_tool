@@ -16,7 +16,6 @@ import {
 import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 import RefreshIcon from "@mui/icons-material/Refresh";
 import LanguageIcon from "@mui/icons-material/Language";
-import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import { useI18n } from "@/lib/i18n";
 import { useDocumentTitle } from "@/hooks/useDocumentTitle";
@@ -157,8 +156,7 @@ export default function IpClient() {
 }`;
 
   return (
-    <div className="min-h-screen flex flex-col">
-      <Navbar />
+    <div className="page-below-navbar flex flex-col">
       <Box
         component="main"
         sx={{

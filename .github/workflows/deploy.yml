@@ -1,0 +1,98 @@
+name: Deploy Blog to Server
+
+on:
+  push:
+    branches:
+      - run
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Build and Pack
+        run: |
+          bun install
+          bun --bun run build
+          tar -czf blog-build.tar.gz build
+
+      - name: Upload Archive
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          passphrase: ${{ secrets.SSH_KEY_PASSPHRASE }}
+          source: "blog-build.tar.gz"
+          target: "~/"
+
+      - name: Sync and Restart
+        uses: appleboy/ssh-action@v1.0.3
+        env:
+          WORK_PATH: ${{ secrets.WORK_PATH }}
+          DNS_MANAGER_TOKEN: ${{ secrets.DNS_MANAGER_TOKEN }}
+          POSTGRES_USER: ${{ secrets.POSTGRES_USER }}
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+          POSTGRES_DB: ${{ secrets.POSTGRES_DB }}
+          POSTGRES_HOST: hzal1.koi.ci
+          POSTGRES_PORT: "5432"
+          POSTGRES_SSL: "true"
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          RESEND_FROM_EMAIL: tool_auth@jadren.me
+          RATE_LIMIT_DB_PATH: .data/email-send-monitor.sqlite
+          LOGIN_RATE_LIMIT_DB_PATH: .data/login-attempt-monitor.sqlite
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          passphrase: ${{ secrets.SSH_KEY_PASSPHRASE }}
+          envs: WORK_PATH,DNS_MANAGER_TOKEN,POSTGRES_USER,POSTGRES_PASSWORD,POSTGRES_DB,POSTGRES_HOST,POSTGRES_PORT,POSTGRES_SSL,JWT_SECRET,RESEND_API_KEY,RESEND_FROM_EMAIL,RATE_LIMIT_DB_PATH,LOGIN_RATE_LIMIT_DB_PATH
+          script: |
+            set -e
+            : "${WORK_PATH:?Missing WORK_PATH}"
+            : "${DNS_MANAGER_TOKEN:?Missing DNS_MANAGER_TOKEN}"
+            : "${POSTGRES_USER:?Missing POSTGRES_USER}"
+            : "${POSTGRES_PASSWORD:?Missing POSTGRES_PASSWORD}"
+            : "${POSTGRES_DB:?Missing POSTGRES_DB}"
+            : "${POSTGRES_HOST:?Missing POSTGRES_HOST}"
+            : "${POSTGRES_PORT:?Missing POSTGRES_PORT}"
+            : "${POSTGRES_SSL:?Missing POSTGRES_SSL}"
+            : "${JWT_SECRET:?Missing JWT_SECRET}"
+            : "${RESEND_API_KEY:?Missing RESEND_API_KEY}"
+            : "${RESEND_FROM_EMAIL:?Missing RESEND_FROM_EMAIL}"
+            : "${RATE_LIMIT_DB_PATH:?Missing RATE_LIMIT_DB_PATH}"
+            : "${LOGIN_RATE_LIMIT_DB_PATH:?Missing LOGIN_RATE_LIMIT_DB_PATH}"
+            cd $WORK_PATH
+            export PATH="$HOME/.bun/bin:$PATH"
+            git fetch origin run
+            git checkout run
+            git reset --hard origin/run
+            bun --bun --smol install
+            rm -rf build
+            tar -xzf ~/blog-build.tar.gz
+            rm -f ~/blog-build.tar.gz
+            umask 077
+            touch .env
+            sed -i '/^DNS_MANAGER_TOKEN=/d; /^POSTGRES_USER=/d; /^POSTGRES_PASSWORD=/d; /^POSTGRES_DB=/d; /^POSTGRES_HOST=/d; /^POSTGRES_PORT=/d; /^POSTGRES_SSL=/d; /^JWT_SECRET=/d; /^RESEND_API_KEY=/d; /^RESEND_FROM_EMAIL=/d; /^RATE_LIMIT_DB_PATH=/d; /^LOGIN_RATE_LIMIT_DB_PATH=/d' .env
+            echo "DNS_MANAGER_TOKEN=$DNS_MANAGER_TOKEN" >> .env
+            printf 'POSTGRES_USER=%s\nPOSTGRES_PASSWORD=%s\nPOSTGRES_DB=%s\n' \
+              "$POSTGRES_USER" "$POSTGRES_PASSWORD" "$POSTGRES_DB" >> .env
+            printf 'POSTGRES_HOST=%s\n' "$POSTGRES_HOST" >> .env
+            printf 'POSTGRES_PORT=%s\n' "$POSTGRES_PORT" >> .env
+            printf 'POSTGRES_SSL=%s\n' "$POSTGRES_SSL" >> .env
+            printf 'JWT_SECRET=%s\n' "$JWT_SECRET" >> .env
+            printf 'RESEND_API_KEY=%s\n' "$RESEND_API_KEY" >> .env
+            printf 'RESEND_FROM_EMAIL=%s\n' "$RESEND_FROM_EMAIL" >> .env
+            printf 'RATE_LIMIT_DB_PATH=%s\n' "$RATE_LIMIT_DB_PATH" >> .env
+            printf 'LOGIN_RATE_LIMIT_DB_PATH=%s\n' "$LOGIN_RATE_LIMIT_DB_PATH" >> .env
+            bun run db:migrate
+            sudo systemctl restart dra-tool.service

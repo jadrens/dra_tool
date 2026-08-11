@@ -120,7 +120,10 @@ export default function DnsManagerLayout({
     <>
       <TokenDialog key={authKey} onAuthenticated={handleAuthenticated} />
 
-      <Box sx={{ display: "flex", minHeight: "100vh", flexDirection: "column" }}>
+      <Box
+        className="page-below-navbar"
+        sx={{ display: "flex", flexDirection: "column" }}
+      >
         {/* Top bar */}
         <AppBar
           position="static"

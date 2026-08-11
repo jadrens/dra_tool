@@ -3,10 +3,11 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev --port 3002",
-    "build": "next build",
-    "start": "next start --port 3002",
-    "lint": "eslint"
+    "dev": "bun --bun next dev --port 3002",
+    "build": "bun --bun next build",
+    "start": "bun --bun next start --port 3002",
+    "lint": "eslint",
+    "db:migrate": "bun database/migrate.ts"
   },
   "dependencies": {
     "@emotion/react": "^11.14.0",
@@ -20,12 +21,15 @@
     "@mui/material": "^9.0.0",
     "@tailwindcss/typography": "^0.5.19",
     "@types/qrcode": "^1.5.6",
+    "bcryptjs": "^3.0.3",
     "framer-motion": "^12.38.0",
+    "jose": "^6.2.8",
     "matter-js": "^0.20.0",
     "next": "16.2.4",
     "qrcode": "^1.5.4",
     "react": "19.2.4",
-    "react-dom": "19.2.4"
+    "react-dom": "19.2.4",
+    "resend": "^6.18.1"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",

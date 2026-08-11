@@ -9,6 +9,9 @@ import ThemeRegistry from "@/components/layout/ThemeRegistry/ThemeRegistry";
 import { I18nProvider } from "@/lib/i18n";
 import LoadingBar from "@/components/layout/LoadingBar";
 import SITE_CONFIG from "@/var/config";
+import AuthLifecycle from "@/components/auth/AuthLifecycle";
+import Navbar from "@/components/layout/Navbar";
+import { NavbarLoginStatusProvider } from "@/components/layout/NavbarLoginStatus";
 
 const nunito = Nunito({
   variable: "--font-nunito",
@@ -46,8 +49,13 @@ export default function RootLayout({
       <body className="min-h-full antialiased" suppressHydrationWarning>
         <ThemeRegistry>
         <I18nProvider>
-          <LoadingBar />
-          {children}
+          <AuthLifecycle>
+            <NavbarLoginStatusProvider>
+              <LoadingBar />
+              <Navbar />
+              {children}
+            </NavbarLoginStatusProvider>
+          </AuthLifecycle>
         </I18nProvider>
       </ThemeRegistry>
       </body>

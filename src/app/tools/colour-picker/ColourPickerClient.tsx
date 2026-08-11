@@ -19,7 +19,6 @@ import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 import ColorLensIcon from "@mui/icons-material/ColorLens";
 import AddIcon from "@mui/icons-material/Add";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutlined";
-import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import { useI18n } from "@/lib/i18n";
 import { useDocumentTitle } from "@/hooks/useDocumentTitle";
@@ -316,8 +315,7 @@ export default function ColourPickerClient() {
   const checker = "linear-gradient(45deg, #d5d5d5 25%, transparent 25%), linear-gradient(-45deg, #d5d5d5 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #d5d5d5 75%), linear-gradient(-45deg, transparent 75%, #d5d5d5 75%)";
 
   return (
-    <div className="min-h-screen flex flex-col">
-      <Navbar />
+    <div className="page-below-navbar flex flex-col">
       <Box component="main" sx={{ flex: 1, px: { xs: 2, sm: 3 }, py: { xs: 5, md: 8 } }}>
         <Box sx={{ width: "100%", maxWidth: 1040, mx: "auto" }}>
           <Stack direction="row" spacing={1.2} sx={{ mb: 1, justifyContent: "center", alignItems: "center" }}>
