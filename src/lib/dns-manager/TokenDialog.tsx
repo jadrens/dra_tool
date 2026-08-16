@@ -137,7 +137,7 @@ export default function TokenDialog({ onAuthenticated }: Props) {
         />
         <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: "block" }}>
           The token is stored in your browser&apos;s localStorage and sent as a Bearer token with
-          every request to <code>nshk.rayou.me</code>.
+          every request to <code>nshk.jadren.me</code>.
         </Typography>
       </DialogContent>
 

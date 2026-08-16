@@ -18,16 +18,43 @@ import { useI18n } from "@/lib/i18n";
 import { useDocumentTitle } from "@/hooks/useDocumentTitle";
 import { alpha } from "@mui/material";
 
-type Mode = "encode" | "decode";
+type Mode = "auto" | "encode" | "decode";
+
+function tryDecodeBase64(value: string): string | null {
+  const normalized = value.trim();
+
+  // Whitespace is allowed in pasted values, but is ignored before
+  // validating/decoding. Padding is optional in pasted Base64 text.
+  const compact = normalized.replace(/\s/g, "");
+  if (
+    !compact ||
+    compact.length % 4 === 1 ||
+    !/^[A-Za-z0-9+/]*={0,2}$/.test(compact)
+  ) {
+    return null;
+  }
+
+  try {
+    const padded = compact + "=".repeat((4 - (compact.length % 4)) % 4);
+    const binary = atob(padded);
+    const bytes = Uint8Array.from(binary, (character) => character.charCodeAt(0));
+    // Fatal decoding prevents ordinary text that merely matches the Base64
+    // alphabet (for example, "test") from being treated as Base64.
+    return new TextDecoder("utf-8", { fatal: true }).decode(bytes);
+  } catch {
+    return null;
+  }
+}
 
 export default function Base64Client() {
   const { t } = useI18n();
   const theme = useTheme();
   useDocumentTitle(t.tools.base64.title);
 
-  const [mode, setMode] = useState<Mode>("encode");
+  const [mode, setMode] = useState<Mode>("auto");
   const [input, setInput] = useState("");
   const [output, setOutput] = useState("");
+  const [convertedAs, setConvertedAs] = useState<"encode" | "decode" | null>(null);
   const [toast, setToast] = useState({ open: false, message: "" });
 
   const handleModeChange = (_: React.MouseEvent<HTMLElement>, newMode: Mode | null) => {
@@ -35,22 +62,39 @@ export default function Base64Client() {
       setMode(newMode);
       setInput("");
       setOutput("");
+      setConvertedAs(null);
     }
   };
 
   const handleConvert = () => {
     if (!input.trim()) {
       setOutput("");
+      setConvertedAs(null);
       return;
     }
     try {
-      if (mode === "encode") {
+      if (mode === "decode" || mode === "auto") {
+        const decoded = tryDecodeBase64(input);
+        if (decoded !== null) {
+          setOutput(decoded);
+          setConvertedAs("decode");
+          return;
+        }
+        if (mode === "decode") {
+          setOutput("Invalid Base64 string");
+          setConvertedAs(null);
+          return;
+        }
+      }
+
+      if (mode === "encode" || mode === "auto") {
         // Use TextEncoder for proper UTF-8 handling
         const encoder = new TextEncoder();
         const bytes = encoder.encode(input);
         let binary = "";
         bytes.forEach((b) => (binary += String.fromCharCode(b)));
         setOutput(btoa(binary));
+        setConvertedAs("encode");
       } else {
         const binary = atob(input.trim());
         const bytes = new Uint8Array(binary.length);
@@ -59,9 +103,11 @@ export default function Base64Client() {
         }
         const decoder = new TextDecoder("utf-8");
         setOutput(decoder.decode(bytes));
+        setConvertedAs("decode");
       }
     } catch {
-      setOutput(mode === "encode" ? "Invalid input for encoding" : "Invalid Base64 string");
+      setOutput(mode === "decode" ? "Invalid Base64 string" : "Invalid input for encoding");
+      setConvertedAs(null);
     }
   };
 
@@ -125,6 +171,7 @@ export default function Base64Client() {
                 },
               }}
             >
+              <ToggleButton value="auto">{t.tools.base64.auto}</ToggleButton>
               <ToggleButton value="encode">{t.tools.base64.encode}</ToggleButton>
               <ToggleButton value="decode">{t.tools.base64.decode}</ToggleButton>
             </ToggleButtonGroup>
@@ -143,7 +190,9 @@ export default function Base64Client() {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               placeholder={
-                mode === "encode"
+                mode === "auto"
+                  ? t.tools.base64.autoPlaceholder
+                  : mode === "encode"
                   ? t.tools.base64.inputPlaceholder
                   : t.tools.base64.decodePlaceholder
               }
@@ -172,7 +221,11 @@ export default function Base64Client() {
                 fontSize: "1rem",
               }}
             >
-              {mode === "encode" ? t.tools.base64.encode : t.tools.base64.decode}
+              {mode === "auto"
+                ? t.tools.base64.auto
+                : mode === "encode"
+                  ? t.tools.base64.encode
+                  : t.tools.base64.decode}
             </Button>
           </Box>
 
@@ -181,6 +234,11 @@ export default function Base64Client() {
             <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 1 }}>
               <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
                 {t.tools.base64.output}
+                {convertedAs && (
+                  <Typography component="span" variant="caption" sx={{ ml: 1, color: "primary.main" }}>
+                    ({convertedAs === "encode" ? t.tools.base64.encoded : t.tools.base64.decoded})
+                  </Typography>
+                )}
               </Typography>
               {output && (
                 <Button

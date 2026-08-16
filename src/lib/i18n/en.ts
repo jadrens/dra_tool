@@ -191,15 +191,19 @@ export const en = {
     base64: {
       title: "Base64 Encode / Decode",
       description: "Encode text to Base64 or decode Base64 to text",
+      auto: "Auto Detect",
       encode: "Encode",
       decode: "Decode",
       input: "Input",
       output: "Output",
+      encoded: "Encoded",
+      decoded: "Decoded",
       copy: "Copy",
       copied: "Copied!",
       switchMode: "Switch mode",
       inputPlaceholder: "Enter text to encode...",
       decodePlaceholder: "Enter Base64 string to decode...",
+      autoPlaceholder: "Enter text or a Base64 string...",
     },
     colourPicker: {
       title: "Colour Picker",
@@ -480,7 +484,7 @@ export const en = {
     },
     health: {
       title: "Server Health",
-      serverLabel: "DNS Server — hkns.rayou.me",
+      serverLabel: "DNS Server — hkns.jadren.me",
       online: "Online",
       offline: "Offline",
       checking: "Checking...",

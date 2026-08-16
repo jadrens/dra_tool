@@ -351,7 +351,7 @@ export default function DnsManagerLayout({
             fullWidth
             value={endpointInput}
             onChange={(e) => setEndpointInput(e.target.value)}
-            placeholder="https://hkns.rayou.me"
+            placeholder="https://hkns.jadren.me"
             onKeyDown={(e) => { if (e.key === "Enter") handleSaveEndpoint(); }}
             slotProps={{
               input: {

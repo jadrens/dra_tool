@@ -1,5 +1,5 @@
 const SITE_CONFIG = {
-  baseUrl: "https://tool.rayou.me",
+  baseUrl: "https://tool.jadren.me",
   siteName: "jadren tools",
   description: "Useful online tools",
   githubRepo: "https://github.com/jadrens/dra_tool",

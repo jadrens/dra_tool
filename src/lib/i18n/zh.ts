@@ -193,15 +193,19 @@ export const zh: TranslationKeys = {
     base64: {
       title: "Base64 编码 / 解码",
       description: "将文本编码为 Base64 或将 Base64 解码为文本",
+      auto: "自动检测",
       encode: "编码",
       decode: "解码",
       input: "输入",
       output: "输出",
+      encoded: "已编码",
+      decoded: "已解码",
       copy: "复制",
       copied: "已复制！",
       switchMode: "切换模式",
       inputPlaceholder: "输入要编码的文本...",
       decodePlaceholder: "输入 Base64 字符串进行解码...",
+      autoPlaceholder: "输入文本或 Base64 字符串...",
     },
     colourPicker: {
       title: "颜色选择器",
@@ -482,7 +486,7 @@ export const zh: TranslationKeys = {
     },
     health: {
       title: "服务器状态",
-      serverLabel: "DNS 服务器 — hkns.rayou.me",
+      serverLabel: "DNS 服务器 — hkns.jadren.me",
       online: "在线",
       offline: "离线",
       checking: "检查中...",

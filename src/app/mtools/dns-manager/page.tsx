@@ -118,7 +118,7 @@ export default function DnsManagerDashboard() {
         Dashboard
       </Typography>
       <Typography variant="body2" color="text.secondary" sx={{ mb: 4 }}>
-        DNS Server at <code>nshk.rayou.me</code>
+        DNS Server at <code>nshk.jadren.me</code>
       </Typography>
 
       {error && (
