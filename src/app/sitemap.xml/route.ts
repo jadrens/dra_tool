@@ -1,63 +1,60 @@
 import { NextResponse } from "next/server";
+import SITE_CONFIG from "@/var/config";
 
-const BASE_URL = "https://tool.jadren.me";
+const SITEMAP_NAMESPACE = "http://www.sitemaps.org/schemas/sitemap/0.9";
 
-function formatDate(date: Date): string {
-  return date.toISOString().split("T")[0];
+// Keep this list limited to public, indexable pages. Account pages and the
+// internal DNS manager are intentionally not part of the public sitemap.
+const PUBLIC_ROUTES = [
+  { path: "/", priority: "1.0" },
+  { path: "/tools", priority: "0.8" },
+  { path: "/tools/base64", priority: "0.7" },
+  { path: "/tools/colour-picker", priority: "0.7" },
+  { path: "/tools/dns", priority: "0.7" },
+  { path: "/tools/dns-leak", priority: "0.7" },
+  { path: "/tools/ip", priority: "0.7" },
+  { path: "/tools/qrcode", priority: "0.7" },
+  { path: "/tools/quick-link", priority: "0.7" },
+] as const;
+
+function escapeXml(value: string): string {
+  return value.replace(/[&<>"']/g, (character) => {
+    const entities: Record<string, string> = {
+      "&": "&amp;",
+      "<": "&lt;",
+      ">": "&gt;",
+      '"': "&quot;",
+      "'": "&apos;",
+    };
+    return entities[character];
+  });
 }
 
-export async function GET() {
-  const today = formatDate(new Date());
+function buildUrl(path: string): string {
+  // URL also normalizes the configured origin and percent-encodes path data.
+  return new URL(path, SITE_CONFIG.baseUrl).toString();
+}
+
+export function GET() {
+  const entries = PUBLIC_ROUTES.map(
+    ({ path, priority }) => `  <url>
+    <loc>${escapeXml(buildUrl(path))}</loc>
+    <changefreq>monthly</changefreq>
+    <priority>${priority}</priority>
+  </url>`,
+  ).join("\n");
 
   const xml = `<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url>
-    <loc>${BASE_URL}/</loc>
-    <lastmod>${today}</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>1.0</priority>
-  </url>
-  <url>
-    <loc>${BASE_URL}/tools</loc>
-    <lastmod>${today}</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>${BASE_URL}/tools/base64</loc>
-    <lastmod>${today}</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>${BASE_URL}/tools/colour-picker</loc>
-    <lastmod>${today}</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>${BASE_URL}/tools/dns</loc>
-    <lastmod>${today}</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>${BASE_URL}/tools/ip</loc>
-    <lastmod>${today}</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>${BASE_URL}/tools/dns-leak</loc>
-    <lastmod>${today}</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.7</priority>
-  </url>
-</urlset>`;
+<urlset xmlns="${SITEMAP_NAMESPACE}">
+${entries}
+</urlset>
+`;
 
   return new NextResponse(xml, {
     headers: {
-      "Content-Type": "application/xml",
+      "Content-Type": "application/xml; charset=utf-8",
+      // The URL list is static; avoid serving a stale response after a deploy.
+      "Cache-Control": "public, max-age=0, s-maxage=3600, must-revalidate",
     },
   });
 }
