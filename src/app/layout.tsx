@@ -26,8 +26,20 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: SITE_CONFIG.siteName,
-  description: SITE_CONFIG.description,
+  metadataBase: new URL(SITE_CONFIG.baseUrl),
+  title: {
+    default: `${SITE_CONFIG.siteName} — Free Online Developer Tools`,
+    template: `%s | ${SITE_CONFIG.siteName}`,
+  },
+  description: "Free online tools for Base64, DNS, IP lookup, QR codes, colours, and short links.",
+  openGraph: {
+    siteName: SITE_CONFIG.siteName,
+    type: "website",
+    locale: "en_US",
+  },
+  twitter: {
+    card: "summary",
+  },
 };
 
 export const viewport = {

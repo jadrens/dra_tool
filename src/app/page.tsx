@@ -2,6 +2,14 @@ import { Box, Avatar } from "@mui/material";
 import StylizedName from "@/components/home/StylizedName";
 import ConfettiBackground from "@/components/home/ConfettiBackground";
 import Footer from "@/components/layout/Footer";
+import { createPageMetadata } from "@/lib/seo";
+
+export const metadata = createPageMetadata({
+  title: "Free Online Developer Tools",
+  description: "A fast, privacy-conscious online toolkit for DNS, IP lookup, Base64, QR codes, colour conversion, and short links.",
+  path: "/",
+  keywords: ["online developer tools", "free web tools", "DNS tools", "IP lookup", "Base64", "QR code generator"],
+});
 
 export default function Home() {
   return (
